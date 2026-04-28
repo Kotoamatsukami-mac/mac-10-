@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-Phase 3 Slice 2 — Ghost underline UI foundation.
+Phase 3 Slice 2 — Ghost completion UI foundation.
 
 Macten currently has the local spine required before execution work begins:
 
@@ -10,7 +10,7 @@ Macten currently has the local spine required before execution work begins:
 Phase 1: Draggable transparent command strip
 Phase 2: NativeEnvironmentSnapshot from the Mac environment
 Phase 3 Slice 1: NativeEnvironmentIndex + resolvePreview()
-Phase 3 Slice 2: Ghost underline preview UI
+Phase 3 Slice 2: Ghost completion preview UI
 ```
 
 ## Locked architecture
@@ -28,7 +28,7 @@ The preview layer is read-only. `PreviewPrediction.executable` must remain `fals
 
 ## Allowed next work
 
-- Tune ghost underline feel and alignment.
+- Tune ghost completion feel and alignment.
 - Verify Tab and ArrowRight acceptance.
 - Add small resolver fixtures or manual checks.
 - Improve exact-match/index lookup without changing the public resolver contract.
@@ -52,8 +52,7 @@ The preview layer is read-only. `PreviewPrediction.executable` must remain `fals
 - `downloads` resolves as a folder entity when present in the snapshot.
 - `sound` resolves as a settings pane entity.
 - `whatsapp` / `whats app` resolves as an app entity if installed.
-- Solid underline appears for exact/prefix confidence.
-- Dotted underline appears only for conservative contains matches.
+- Ghost completion appears as faint text only, without underline.
 - Ambiguous/no-match/empty completion stays silent.
 - Tab accepts the visible completion.
 - ArrowRight accepts only when the caret is at the end.
