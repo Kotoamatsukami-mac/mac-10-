@@ -146,6 +146,39 @@ interface Candidate {
   score: number;
 }
 
+function candidateFor(entity: IndexedEntity, match: AliasMatch): Candidate {
+  return {
+    entity,
+    match,
+    score: match.base + entity.source_boost,
+  };
+}
+
+function exactCandidates(target: string, index: NativeEnvironmentIndex): Candidate[] {
+  const exact = index.byAlias.get(target);
+  if (!exact) return [];
+  return exact.map((entity) =>
+    candidateFor(entity, {
+      tier: "exact",
+      base: TIER_BASE.exact,
+      alias: target,
+    }),
+  );
+}
+
+function prefixAndContainsCandidates(
+  target: string,
+  index: NativeEnvironmentIndex,
+): Candidate[] {
+  const candidates: Candidate[] = [];
+  for (const entity of index.entities) {
+    const match = bestAliasMatch(target, entity.aliases);
+    if (!match || match.tier === "exact") continue;
+    candidates.push(candidateFor(entity, match));
+  }
+  return candidates;
+}
+
 // ─── Empty / no-match prediction ────────────────────────────────────────────
 
 function emptyPrediction(
@@ -185,15 +218,11 @@ export function resolvePreview(
     return emptyPrediction(rawInput, normalized, actionPhrase);
   }
 
-  const candidates: Candidate[] = [];
-  for (const entity of index.entities) {
-    const match = bestAliasMatch(target, entity.aliases);
-    if (!match) continue;
-    candidates.push({
-      entity,
-      match,
-      score: match.base + entity.source_boost,
-    });
+  // Fast path: exact alias lookup uses the prebuilt alias index. Prefix and
+  // contains matches still scan entities because they need partial matching.
+  const candidates = exactCandidates(target, index);
+  if (candidates.length === 0) {
+    candidates.push(...prefixAndContainsCandidates(target, index));
   }
 
   if (candidates.length === 0) {
