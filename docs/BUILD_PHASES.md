@@ -78,17 +78,18 @@ NativeEnvironmentSnapshot
 - src/resolver/previewResolver.ts
 - Zero-dependency. No invoke. No native probes.
 - Generic: every target flows through the same resolver path.
-- Returns PreviewPrediction with completion field for ghost underline UI.
+- Returns PreviewPrediction with completion field for ghost completion UI.
 - confidence_tier: exact, prefix, contains, ambiguous, no_match
 - fuzzy: typed but not implemented yet ✅
 
-### Slice 2 — Ghost underline UI (next)
+### Slice 2 — Ghost completion UI (next)
 - Wire resolvePreview to debounced input in strip
 - Load NativeEnvironmentSnapshot once on mount via invoke
 - Build NativeEnvironmentIndex in memory
 - On keystroke: debounce 300ms then resolvePreview
-- Show completion as faint underlined ghost text after typed text
-- On pause: ghost appears with underline
+- Show completion as faint ghost text after typed text
+- Ghost text has no underline; confidence remains internal/resolver state
+- On pause: ghost appears quietly
 - On type: ghost clears instantly, vertical cursor returns
 - On Tab or arrow right: accept suggestion, cursor moves to end
 - No execution. No dropdown. No command palette.
