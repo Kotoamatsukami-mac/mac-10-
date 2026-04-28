@@ -138,11 +138,19 @@ body,
 }
 
 .ghost-solid {
-  text-decoration: none;
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-color: rgba(255, 255, 255, 0.32);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
 }
 
 .ghost-dotted {
-  text-decoration: none;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(255, 255, 255, 0.24);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
 }
 
 .command-input::placeholder {
