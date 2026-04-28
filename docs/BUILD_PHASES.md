@@ -1,6 +1,6 @@
 # Macten Build Phases
 
-## Phase 1 — Draggable strip (current)
+## Phase 1 — Draggable strip (complete)
 
 Target: a physically trustworthy strip with no brain.
 
@@ -9,21 +9,13 @@ Target: a physically trustworthy strip with no brain.
 - One command input
 - Large reliable drag region
 - Input remains clickable and typeable at all times
-- Pin button exists but must not break dragging
-- Global shortcut to focus the bar
+- Pin button toggles alwaysOnTop, never breaks drag
+- Global shortcut Cmd+Shift+Space to focus the bar
 
-Not in this phase:
-- No parser
-- No executor
-- No native lexicon
-- No provider logic
-- No expanded panel
-- No settings
+Milestone: strip opens, transparent, drags perfectly,
+input types perfectly, pin does not break drag. ✅
 
-Milestone: strip opens, strip is transparent, strip drags perfectly,
-input types perfectly, pin does not break drag.
-
-## Phase 2 — Native Environment Index (read-only)
+## Phase 2 — Native Environment Index (complete)
 
 The lexicon is not a list. It is a resolver-facing projection of the Mac's actual environment.
 
@@ -59,7 +51,7 @@ The Native Environment Index has four volatility classes:
 
 ### Deliverable
 Typed Rust commands and TypeScript bindings that return one clean
-NativeEnvironmentSnapshot object to the frontend.
+NativeEnvironmentSnapshot object to the frontend. ✅
 
 ### Phase 2 hard rules
 - Read-only only
@@ -73,9 +65,42 @@ NativeEnvironmentSnapshot object to the frontend.
 
 ## Phase 3 — Preview interpretation (read-only)
 
-interpret_preview runs on debounced input.
-Returns: status, canonical, tokens, headline, detail, suggestion, choices, risk, can_submit.
-Does not create pending commands. Does not execute.
+Architecture:
+
+NativeEnvironmentSnapshot
+→ buildNativeEnvironmentIndex(snapshot) → NativeEnvironmentIndex
+→ resolvePreview(rawInput, index) → PreviewPrediction
+→ completion + confidence_tier
+→ executable: false always
+
+### Slice 1 — Resolver foundation (complete)
+- src/resolver/nativeEnvironmentIndex.ts
+- src/resolver/previewResolver.ts
+- Zero-dependency. No invoke. No native probes.
+- Generic: every target flows through the same resolver path.
+- Returns PreviewPrediction with completion field for ghost underline UI.
+- confidence_tier: exact, prefix, contains, ambiguous, no_match
+- fuzzy: typed but not implemented yet ✅
+
+### Slice 2 — Ghost underline UI (next)
+- Wire resolvePreview to debounced input in strip
+- Load NativeEnvironmentSnapshot once on mount via invoke
+- Build NativeEnvironmentIndex in memory
+- On keystroke: debounce 300ms then resolvePreview
+- Show completion as faint underlined ghost text after typed text
+- On pause: ghost appears with underline
+- On type: ghost clears instantly, vertical cursor returns
+- On Tab or arrow right: accept suggestion, cursor moves to end
+- No execution. No dropdown. No command palette.
+
+### Phase 3 hard rules
+- Read-only only
+- No command execution
+- No provider AI
+- No planner
+- No governor
+- No native probes per keystroke
+- Rust not touched in Phase 3
 
 ## Phase 4 — First five safe commands
 
