@@ -1,0 +1,138 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    sans-serif;
+  font-size: 14px;
+  color: #f5f5f7;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}
+
+.strip {
+  width: 800px;
+  height: 76px;
+  display: flex;
+  align-items: stretch;
+  background: rgba(20, 20, 22, 0.78);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.drag-handle {
+  height: 100%;
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+  app-region: drag;
+  cursor: grab;
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.grip {
+  width: 18px;
+  height: 22px;
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.35) 1.2px,
+    transparent 1.4px
+  );
+  background-size: 6px 6px;
+  background-position: center;
+  pointer-events: none;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+.input-wrap {
+  flex: 1 1 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.command-input {
+  width: 100%;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #f5f5f7;
+  font-size: 15px;
+  font-family: inherit;
+  padding: 0 16px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.command-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.command-input:focus {
+  border-color: rgba(120, 160, 255, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pin-button {
+  width: 40px;
+  height: 40px;
+  margin: 0 8px 0 4px;
+  align-self: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.pin-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.pin-button.active {
+  background: rgba(120, 160, 255, 0.18);
+  color: #a8c1ff;
+  border-color: rgba(120, 160, 255, 0.28);
+}
+
+.pin-glyph {
+  pointer-events: none;
+}

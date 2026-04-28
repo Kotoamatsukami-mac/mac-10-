@@ -20,19 +20,56 @@ Not in this phase:
 - No expanded panel
 - No settings
 
-Milestone: strip opens, strip is transparent, strip drags perfectly, 
+Milestone: strip opens, strip is transparent, strip drags perfectly,
 input types perfectly, pin does not break drag.
 
-## Phase 2 — Native Lexicon (read-only)
+## Phase 2 — Native Environment Index (read-only)
 
-get_native_lexicon returns real local data:
-- installed apps + bundle IDs
-- installed browsers
-- common folders
-- known web services
+The lexicon is not a list. It is a resolver-facing projection of the Mac's actual environment.
+
+The Native Environment Index has four volatility classes:
+
+### 1. Static-ish Inventory — scan on launch
+- Installed apps from /Applications, /System/Applications, ~/Applications
 - System Settings panes
+- User folders: Desktop, Downloads, Documents
+- Apple Shortcuts if accessible
+- Default app handlers where practical
 
-No execution in this phase.
+### 2. User Preference Signals — scan on launch
+- Dock pinned apps
+- Login items
+- Recent apps/items if practical
+- Menu bar and background agents where practical
+
+### 3. Live Runtime State — live query always
+- Running apps
+- Frontmost app
+- Connected displays
+- Audio input/output devices
+- Mounted volumes
+- Bluetooth devices if practical
+
+### 4. Permission/Capability Map — check on launch and before relevant actions
+- Accessibility permission
+- Automation/System Events capability
+- Screen Recording permission if detectable
+- Full Disk Access if detectable
+- Notification permission if detectable
+
+### Deliverable
+Typed Rust commands and TypeScript bindings that return one clean
+NativeEnvironmentSnapshot object to the frontend.
+
+### Phase 2 hard rules
+- Read-only only
+- No command execution
+- No AI planner
+- No destructive actions
+- No broad refactor
+- No fake hardcoded data
+- No React components directly calling random native probes
+- No changes to Phase 1 strip behaviour
 
 ## Phase 3 — Preview interpretation (read-only)
 

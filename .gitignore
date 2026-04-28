@@ -1,0 +1,22 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# tauri
+src-tauri/target
+src-tauri/gen/schemas
+
+# os
+.DS_Store
+Thumbs.db
