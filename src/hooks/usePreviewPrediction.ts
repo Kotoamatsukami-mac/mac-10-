@@ -11,7 +11,7 @@
 // No execution. No native probes per keystroke. No invoke beyond the single
 // snapshot fetch on mount.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { loadNativeEnvironment } from "../types/nativeEnvironment";
 import {
   buildNativeEnvironmentIndex,
@@ -24,7 +24,16 @@ import {
 
 const DEBOUNCE_MS = 300;
 
-export function usePreviewPrediction(input: string): PreviewPrediction | null {
+export type ResolveNowResult =
+  | { kind: "resolved"; prediction: PreviewPrediction | null }
+  | { kind: "unavailable"; reason: string; raw_input: string };
+
+export interface PreviewPredictionHandle {
+  prediction: PreviewPrediction | null;
+  resolveNow: (input: string) => ResolveNowResult;
+}
+
+export function usePreviewPrediction(input: string): PreviewPredictionHandle {
   const [prediction, setPrediction] = useState<PreviewPrediction | null>(null);
   const indexRef = useRef<NativeEnvironmentIndex | null>(null);
 
@@ -58,5 +67,20 @@ export function usePreviewPrediction(input: string): PreviewPrediction | null {
     };
   }, [input]);
 
-  return prediction;
+  const resolveNow = useCallback((currentInput: string): ResolveNowResult => {
+    const index = indexRef.current;
+    if (!index) {
+      return {
+        kind: "unavailable",
+        reason: "native environment index unavailable",
+        raw_input: currentInput,
+      };
+    }
+    return {
+      kind: "resolved",
+      prediction: resolvePreview(currentInput, index),
+    };
+  }, []);
+
+  return { prediction, resolveNow };
 }

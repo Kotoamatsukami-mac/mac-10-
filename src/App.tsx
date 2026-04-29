@@ -30,7 +30,7 @@ export default function App() {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const prediction = usePreviewPrediction(value);
+  const { prediction, resolveNow } = usePreviewPrediction(value);
   const showGhost = shouldShowGhost(prediction);
   const completion = showGhost && prediction ? prediction.completion : "";
   const underline =
@@ -87,8 +87,22 @@ export default function App() {
   };
 
   const submit = async () => {
-    if (!prediction) return;
-    const outcome = await runSpine(prediction);
+    const submittedInput = value;
+    if (!submittedInput.trim()) return;
+
+    const resolved = resolveNow(submittedInput);
+    if (resolved.kind === "unavailable") {
+      console.log("[macten spine]", {
+        kind: "rejected",
+        raw_input: submittedInput,
+        reason: resolved.reason,
+      });
+      return;
+    }
+
+    if (!resolved.prediction) return;
+
+    const outcome = await runSpine(resolved.prediction);
     if (outcome.execution?.kind === "ok") {
       setValue("");
     } else {
