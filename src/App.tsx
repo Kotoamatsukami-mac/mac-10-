@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { usePreviewPrediction } from "./hooks/usePreviewPrediction";
 import type { PreviewPrediction } from "./resolver/previewResolver";
+import { runSpine } from "./spine/runSpine";
 
 const CONTAINS_THRESHOLD = 0.5;
 
@@ -85,7 +86,22 @@ export default function App() {
     });
   };
 
+  const submit = async () => {
+    if (!prediction) return;
+    const outcome = await runSpine(prediction);
+    if (outcome.execution?.kind === "ok") {
+      setValue("");
+    } else {
+      console.log("[macten spine]", outcome);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void submit();
+      return;
+    }
     if (!showGhost || !completion) return;
     if (e.key === "Tab") {
       e.preventDefault();

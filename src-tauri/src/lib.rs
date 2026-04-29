@@ -1,6 +1,7 @@
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+mod executor;
 mod native_environment;
 
 #[tauri::command]
@@ -14,7 +15,9 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             set_pinned,
-            native_environment::get_native_environment_snapshot
+            native_environment::get_native_environment_snapshot,
+            executor::executor_open_path,
+            executor::executor_open_url
         ])
         .setup(|app| {
             let focus_shortcut =
