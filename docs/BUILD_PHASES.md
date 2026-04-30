@@ -55,7 +55,6 @@ NativeEnvironmentSnapshot object to the frontend. ✅
 
 ### Phase 2 hard rules
 - Read-only only
-- No command execution
 - No AI planner
 - No destructive actions
 - No broad refactor
@@ -63,7 +62,7 @@ NativeEnvironmentSnapshot object to the frontend. ✅
 - No React components directly calling random native probes
 - No changes to Phase 1 strip behaviour
 
-## Phase 3 — Preview interpretation (read-only)
+## Phase 3 — Preview interpretation (complete)
 
 Architecture:
 
@@ -71,7 +70,7 @@ NativeEnvironmentSnapshot
 → buildNativeEnvironmentIndex(snapshot) → NativeEnvironmentIndex
 → resolvePreview(rawInput, index) → PreviewPrediction
 → completion + confidence_tier
-→ executable: false always
+→ executable: false in preview
 
 ### Slice 1 — Resolver foundation (complete)
 - src/resolver/nativeEnvironmentIndex.ts
@@ -82,39 +81,77 @@ NativeEnvironmentSnapshot
 - confidence_tier: exact, prefix, contains, ambiguous, no_match
 - fuzzy: typed but not implemented yet ✅
 
-### Slice 2 — Ghost completion UI (next)
+### Slice 2 — Ghost completion UI (complete)
 - Wire resolvePreview to debounced input in strip
 - Load NativeEnvironmentSnapshot once on mount via invoke
 - Build NativeEnvironmentIndex in memory
 - On keystroke: debounce 300ms then resolvePreview
+- Trailing whitespace suppresses preview so Space acts as keep-typing / reject-ghost
 - Show completion as faint ghost text after typed text
 - Ghost text has no underline; confidence remains internal/resolver state
 - On pause: ghost appears quietly
 - On type: ghost clears instantly, vertical cursor returns
 - On Tab or arrow right: accept suggestion, cursor moves to end
-- No execution. No dropdown. No command palette.
+- No dropdown. No command palette. ✅
 
 ### Phase 3 hard rules
-- Read-only only
-- No command execution
 - No provider AI
 - No planner
-- No governor
 - No native probes per keystroke
-- Rust not touched in Phase 3
+- Rust not touched for preview UI
 
-## Phase 4 — First five safe commands
+## Phase 4 — Safe local execution spine (started)
 
-- open app
-- open folder
-- open service
-- set volume
-- open display settings
+Goal: execute the first safe command families through the fixed local spine:
 
-Full spine pass-through for each.
+parser → validator → risk → approve → executor → history
 
-## Phase 5 — Risk and approval
+### Slice 1 — Open-style execution spine (current)
+- src/spine/parser.ts
+- src/spine/registry.ts
+- src/spine/validator.ts
+- src/spine/risk.ts
+- src/spine/approve.ts
+- src/spine/executor.ts
+- src/spine/history.ts
+- src/spine/runSpine.ts
+- src-tauri/src/executor.rs
 
+Enter submits the current input by resolving it through Phase 3, then running the Phase 4 spine.
+
+Currently reachable action families:
+- app.open
+- folder.open
+- service.open
+- settings.open
+
+Registered but intentionally inert:
+- volume.set — registry placeholder only; executable=false until a bounded native volume command exists.
+
+Execution boundary:
+- TypeScript executor calls only explicit Tauri commands.
+- Rust exposes executor_open_path and executor_open_url.
+- executor_open_path requires the path to exist.
+- executor_open_url only allows http, https, mailto, tel, and x-apple.systempreferences schemes.
+- Rust delegates to /usr/bin/open with -- target.
+- No AppleScript.
+- No osascript.
+- No free-form shell surface exposed to the frontend.
+- No destructive operations.
+
+### Phase 4 hard rules
+- No provider AI
+- No planner or multi-step agent
+- No destructive filesystem changes
+- No command-specific hacks such as openSafari()
+- New action families must be added through registry → validator → risk → approval → executor → history
+
+## Phase 5 — Risk and approval UI
+
+Future work:
+- Inline approval UI for attention-risk actions
+- Stronger history inspection
+- Undo/inverse metadata where possible
 - quit app
 - force quit
 - create folder
@@ -128,5 +165,5 @@ Filesystem stays inside $HOME unless explicitly extended.
 ## Phase 6 — Provider interpretation
 
 Only after local spine is proven solid.
-Provider output converts into the same ParsedCommand shape and re-enters the spine.
+Provider output converts into the same ParsedCommand / typed plan shape and re-enters the spine.
 Provider may not execute, invent state, or bypass any layer.
