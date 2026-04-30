@@ -22,15 +22,23 @@ THE COMMAND SPINE IS THE TRUST LAYER
 
 ## Command Spine
 
-native lexicon → parser → resolver → validator → risk → approve → executor → history
+Macten has two related local paths. They must not be merged or confused.
 
-No provider, no shortcut, no smart path may bypass the spine.
+Preview path, advisory only:
+
+NativeEnvironmentSnapshot → NativeEnvironmentIndex → resolvePreview → PreviewPrediction → ghost completion
+
+Submit path, execution capable:
+
+resolveNow(currentInput) → parser → validator → risk → approve → executor → history
+
+No provider, shortcut, UI helper, or smart path may bypass the submit spine.
 
 ## Interpretation layer
 
 Macten's interpretation layer feels AI-grade by reading the user's sentence against the Mac's real local vocabulary — installed apps, folders, browsers, services, settings, permissions, and command history — instead of guessing from an empty prompt.
 
-The moat is verifiability, not linguistic supremacy.
+The Native Environment Index is the resolver-facing projection of that local vocabulary. The moat is verifiability, not linguistic supremacy.
 
 ## UI failure rule
 
@@ -49,7 +57,7 @@ Forbidden user-facing strings: Error, Failed, stack traces, raw enum codes.
 ## Build order
 
 1. Draggable strip
-2. Native lexicon
+2. Native Environment Index
 3. Preview interpretation
 4. Safe local command execution
 5. Approval and history
