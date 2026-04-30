@@ -176,8 +176,11 @@ pub struct Volume {
     pub mount_path: String,
 }
 
+// Phase 5+ — variants are reserved for when permission readers return real
+// status instead of Unavailable. Suppress dead_code until then.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[allow(dead_code)]
 pub enum PermissionStatus {
     Granted,
     Denied,
