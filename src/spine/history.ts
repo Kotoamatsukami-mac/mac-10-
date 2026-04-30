@@ -2,7 +2,10 @@
 //
 // One in-memory append-only log of every spine attempt, including those
 // rejected before execution. This is the audit trail the contract requires
-// at the trust layer; later slices can persist it.
+// at the trust layer.
+//
+// Phase 4 Slice 1 scope: in-memory only. Records are lost on app/window reload
+// or process restart. Persistence and inspection UI belong to Phase 5+.
 
 import type { ParsedCommand } from "./parser";
 import type { ValidationStatus } from "./validator";
