@@ -52,6 +52,8 @@ export interface IndexedEntity {
   path?: string;
   bundle_id?: string | null;
   url?: string;
+  // Generic executor target identifier. For settings panes this intentionally
+  // stores the full x-apple.systempreferences anchor URL, not the short pane id.
   identifier?: string;
 }
 
@@ -240,6 +242,8 @@ function indexSettingsPane(pane: SettingsPane): IndexedEntity {
     target_kind: "settings_pane",
     source: "static_inventory",
     source_boost: SOURCE_BOOSTS.static_inventory,
+    // Store the launchable anchor URL in the generic executor identifier slot.
+    // The short Rust pane identifier remains encoded in the entity id/aliases.
     identifier: pane.anchor,
   };
 }
