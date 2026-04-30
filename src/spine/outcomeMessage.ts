@@ -39,17 +39,17 @@ export function statusFromOutcome(outcome: SpineOutcome): StripStatus {
   if (v.kind === "invalid") {
     switch (v.guidance) {
       case "needs_more":
-        return { kind: "hint", msg: "Type more" };
+        return { kind: "hint", msg: "Keep typing" };
       case "choose_one":
-        return { kind: "hint", msg: "Choose one" };
+        return { kind: "hint", msg: "Be more specific" };
       case "permission_needed":
-        return { kind: "hint", msg: "Allow permission" };
+        return { kind: "hint", msg: "Needs permission" };
       case "approval_needed":
-        return { kind: "hint", msg: "Confirm" };
+        return { kind: "hint", msg: "Needs confirm" };
       case "unsupported_yet":
-        return { kind: "hint", msg: "Not yet" };
+        return { kind: "hint", msg: "Not available yet" };
       case "blocked":
-        return { kind: "blocked", msg: "Blocked" };
+        return { kind: "blocked", msg: "Not allowed" };
     }
   }
 
