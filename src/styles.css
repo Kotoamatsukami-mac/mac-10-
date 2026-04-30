@@ -6,6 +6,23 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+
+  /* Dark rainbow accent palette — slim, muted, 2026 */
+  --accent-ok: #6ee7a0;
+  --accent-hint: #a78bfa;
+  --accent-blocked: #f87171;
+  --accent-focus: rgba(120, 160, 255, 0.5);
+  --accent-pin: #a8c1ff;
+  --strip-bg: rgba(18, 18, 20, 0.84);
+  --strip-border: rgba(255, 255, 255, 0.06);
+  --strip-glow: 0 20px 60px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  --input-bg: rgba(255, 255, 255, 0.035);
+  --input-border: rgba(255, 255, 255, 0.06);
+  --input-focus-bg: rgba(255, 255, 255, 0.05);
+  --ghost-color: rgba(255, 255, 255, 0.22);
+  --placeholder-color: rgba(255, 255, 255, 0.26);
+  --grip-dot: rgba(255, 255, 255, 0.28);
 }
 
 * {
@@ -29,18 +46,18 @@ body,
   height: 76px;
   display: flex;
   align-items: stretch;
-  background: rgba(20, 20, 22, 0.82);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
-  backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 18px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.06) inset;
+  background: var(--strip-bg);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--strip-border);
+  border-radius: 20px;
+  box-shadow: var(--strip-glow);
   overflow: hidden;
 }
 
 .drag-handle {
   height: 100%;
-  width: 64px;
+  width: 56px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -48,7 +65,7 @@ body,
   -webkit-app-region: drag;
   app-region: drag;
   cursor: grab;
-  color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.14);
 }
 
 .drag-handle:active {
@@ -56,16 +73,17 @@ body,
 }
 
 .grip {
-  width: 18px;
-  height: 22px;
+  width: 14px;
+  height: 18px;
   background-image: radial-gradient(
     circle,
-    rgba(255, 255, 255, 0.35) 1.2px,
-    transparent 1.4px
+    var(--grip-dot) 1px,
+    transparent 1.2px
   );
-  background-size: 6px 6px;
+  background-size: 5px 5px;
   background-position: center;
   pointer-events: none;
+  opacity: 0.7;
 }
 
 .no-drag {
@@ -78,7 +96,7 @@ body,
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 6px;
   min-width: 0;
 }
 
@@ -93,11 +111,11 @@ body,
   z-index: 1;
   width: 100%;
   height: 44px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 12px;
   color: #f0f0f2;
-  font-size: 15.5px;
+  font-size: 15px;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
   font-weight: 400;
   letter-spacing: 0.01em;
@@ -105,6 +123,7 @@ body,
   outline: none;
   user-select: text;
   -webkit-user-select: text;
+  transition: border-color 150ms ease, background 150ms ease;
 }
 
 .input-ghost {
@@ -117,7 +136,7 @@ body,
   padding: 0 16px;
   border: 1px solid transparent;
   border-radius: 12px;
-  font-size: 15.5px;
+  font-size: 15px;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
   font-weight: 400;
   letter-spacing: 0.01em;
@@ -133,53 +152,76 @@ body,
 }
 
 .ghost-completion {
-  color: rgba(255, 255, 255, 0.24);
+  color: var(--ghost-color);
   text-decoration: none;
 }
+
+/* ── Status overlay — dark rainbow accents ──────────────────────────── */
 
 .strip-status {
-  color: rgba(255, 255, 255, 0.62);
   text-decoration: none;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: opacity 200ms ease;
 }
 
+.strip-status-ok {
+  color: var(--accent-ok);
+  opacity: 0.85;
+}
+
+.strip-status-hint {
+  color: var(--accent-hint);
+  opacity: 0.75;
+}
+
+.strip-status-blocked {
+  color: var(--accent-blocked);
+  opacity: 0.8;
+}
+
+/* ── Input states ───────────────────────────────────────────────────── */
+
 .command-input::placeholder {
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--placeholder-color);
   font-weight: 300;
   letter-spacing: 0.01em;
 }
 
 .command-input:focus {
-  border-color: rgba(120, 160, 255, 0.5);
-  background: rgba(255, 255, 255, 0.055);
+  border-color: var(--accent-focus);
+  background: var(--input-focus-bg);
 }
 
+/* ── Pin button ─────────────────────────────────────────────────────── */
+
 .pin-button {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   margin: 0 8px 0 4px;
   align-self: center;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 120ms ease, color 120ms ease;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .pin-button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .pin-button.active {
-  background: rgba(120, 160, 255, 0.16);
-  color: #a8c1ff;
-  border-color: rgba(120, 160, 255, 0.25);
+  background: rgba(120, 160, 255, 0.14);
+  color: var(--accent-pin);
+  border-color: rgba(120, 160, 255, 0.22);
 }
 
 .pin-glyph {
