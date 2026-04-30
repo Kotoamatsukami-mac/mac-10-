@@ -21,10 +21,6 @@ function shouldShowGhost(p: PreviewPrediction | null): boolean {
   }
 }
 
-function ghostUnderlineStyle(p: PreviewPrediction): "solid" | "dotted" {
-  return p.confidence_tier === "contains" ? "dotted" : "solid";
-}
-
 export default function App() {
   const [pinned, setPinned] = useState(false);
   const [value, setValue] = useState("");
@@ -33,8 +29,6 @@ export default function App() {
   const { prediction, resolveNow } = usePreviewPrediction(value);
   const showGhost = shouldShowGhost(prediction);
   const completion = showGhost && prediction ? prediction.completion : "";
-  const underline =
-    showGhost && prediction ? ghostUnderlineStyle(prediction) : "solid";
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -149,9 +143,7 @@ export default function App() {
           {showGhost && prediction && (
             <div className="input-ghost" aria-hidden="true">
               <span className="ghost-typed">{value}</span>
-              <span className={`ghost-completion ghost-${underline}`}>
-                {prediction.completion}
-              </span>
+              <span className="ghost-completion">{prediction.completion}</span>
             </div>
           )}
           <input
