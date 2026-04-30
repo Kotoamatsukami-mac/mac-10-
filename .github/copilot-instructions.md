@@ -40,9 +40,17 @@ THE COMMAND SPINE IS THE TRUST LAYER
 
 ## Command Spine — fixed, do not rename
 
-NativeEnvironmentSnapshot → NativeEnvironmentIndex → resolvePreview → parser → validator → risk → approve → executor → history
+There are two related paths. Do not merge or confuse them.
 
-No provider, shortcut, UI helper, or smart path may bypass the spine.
+Preview path, advisory only:
+
+NativeEnvironmentSnapshot → NativeEnvironmentIndex → resolvePreview → PreviewPrediction → ghost completion
+
+Submit path, execution capable:
+
+resolveNow(currentInput) → parser → validator → risk → approve → executor → history
+
+No provider, shortcut, UI helper, or smart path may bypass the submit spine.
 
 Current TypeScript spine files live in `src/spine/`:
 
@@ -88,6 +96,7 @@ Rules to prevent this:
 
 - Tauri 2, macOS-first, macOSPrivateApi: true
 - width 800, height 76, transparent, undecorated, non-resizable
+- alwaysOnTop defaults false and is toggled only by the pin button through `set_pinned`
 - Strip must always be draggable. Pinning never disables drag.
 - Input stays clickable and typeable at all times.
 - No expanded dashboard. Inline panels only.
