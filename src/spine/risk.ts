@@ -2,7 +2,7 @@
 //
 // Three levels for this slice: safe / attention / blocked. No destructive
 // operations are reachable, so the surface is simple — open-style actions
-// are safe, audio mutation is attention, anything unknown is blocked.
+// are safe and anything unknown is blocked.
 
 import type { ParsedCommand } from "./parser";
 
@@ -36,6 +36,9 @@ export function assessRisk(cmd: ParsedCommand): RiskAssessment {
         reason: "opens a System Settings pane",
       };
     case "volume.set":
+      // Currently unreachable because registry.ts keeps volume.set
+      // executable=false. This risk classification documents the intended
+      // approval posture for the future bounded volume slice.
       return {
         level: "attention",
         reason: "modifies system audio output",
