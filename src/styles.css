@@ -137,11 +137,6 @@ body,
   text-decoration: none;
 }
 
-.ghost-solid,
-.ghost-dotted {
-  text-decoration: none;
-}
-
 .command-input::placeholder {
   color: rgba(255, 255, 255, 0.28);
   font-weight: 300;
