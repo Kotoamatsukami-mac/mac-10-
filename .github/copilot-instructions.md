@@ -165,7 +165,7 @@ Refuse to add even if asked:
 - theme system
 - planner or multi-step agent
 - provider-first command path
-- features outside the current phase
+- features outside Phase 4 Slice 1 unless explicitly approved in `docs/BUILD_PHASES.md` and `docs/CHECKPOINT.md`
 - a second executor or second command spine
 - one-off command functions such as `openSafari()` or `openYoutube()`
 
