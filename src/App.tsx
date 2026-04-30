@@ -5,6 +5,11 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { usePreviewPrediction } from "./hooks/usePreviewPrediction";
 import type { PreviewPrediction } from "./resolver/previewResolver";
 import { runSpine } from "./spine/runSpine";
+import {
+  type StripStatus,
+  statusFromOutcome,
+  statusFromResolveNow,
+} from "./spine/outcomeMessage";
 
 const CONTAINS_THRESHOLD = 0.5;
 
@@ -24,11 +29,40 @@ function shouldShowGhost(p: PreviewPrediction | null): boolean {
 export default function App() {
   const [pinned, setPinned] = useState(false);
   const [value, setValue] = useState("");
+  const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
   const inputRef = useRef<HTMLInputElement>(null);
+  const statusTimerRef = useRef<number | null>(null);
 
   const { prediction, resolveNow } = usePreviewPrediction(value);
   const showGhost = shouldShowGhost(prediction);
-  const completion = showGhost && prediction ? prediction.completion : "";
+  const ghostVisible = status.kind === "idle" && showGhost;
+  const completion = ghostVisible && prediction ? prediction.completion : "";
+
+  const clearStatusTimer = () => {
+    if (statusTimerRef.current !== null) {
+      window.clearTimeout(statusTimerRef.current);
+      statusTimerRef.current = null;
+    }
+  };
+
+  const setStripStatus = (next: StripStatus) => {
+    clearStatusTimer();
+    setStatus(next);
+    if (next.kind === "idle") return;
+    const ms = next.kind === "ok" ? 1200 : next.kind === "hint" ? 2500 : 3000;
+    statusTimerRef.current = window.setTimeout(() => {
+      statusTimerRef.current = null;
+      setStatus({ kind: "idle" });
+    }, ms);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (statusTimerRef.current !== null) {
+        window.clearTimeout(statusTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -85,23 +119,20 @@ export default function App() {
     if (!submittedInput.trim()) return;
 
     const resolved = resolveNow(submittedInput);
-    if (resolved.kind === "unavailable") {
-      console.log("[macten spine]", {
-        kind: "rejected",
-        raw_input: submittedInput,
-        reason: resolved.reason,
-      });
+    const resolveStatus = statusFromResolveNow(resolved);
+    if (resolveStatus) {
+      setStripStatus(resolveStatus);
       return;
     }
 
-    if (!resolved.prediction) return;
+    if (resolved.kind !== "resolved" || !resolved.prediction) return;
 
     const outcome = await runSpine(resolved.prediction);
+    const next = statusFromOutcome(outcome);
     if (outcome.execution?.kind === "ok") {
       setValue("");
-    } else {
-      console.log("[macten spine]", outcome);
     }
+    setStripStatus(next);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -110,7 +141,7 @@ export default function App() {
       void submit();
       return;
     }
-    if (!showGhost || !completion) return;
+    if (!ghostVisible || !completion) return;
     if (e.key === "Tab") {
       e.preventDefault();
       acceptCompletion();
@@ -140,19 +171,36 @@ export default function App() {
 
       <div className="input-wrap no-drag">
         <div className="input-stack">
-          {showGhost && prediction && (
+          {status.kind !== "idle" ? (
+            <div className="input-ghost" aria-hidden="true">
+              <span className="ghost-typed">{value}</span>
+              <span
+                className={`strip-status strip-status-${status.kind}`}
+              >
+                {status.msg}
+              </span>
+            </div>
+          ) : ghostVisible && prediction ? (
             <div className="input-ghost" aria-hidden="true">
               <span className="ghost-typed">{value}</span>
               <span className="ghost-completion">{prediction.completion}</span>
             </div>
-          )}
+          ) : null}
           <input
             ref={inputRef}
             className="command-input"
             type="text"
-            placeholder="Command your Mac in one sentence"
+            placeholder={
+              status.kind !== "idle" ? "" : "Command your Mac in one sentence"
+            }
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              if (status.kind !== "idle") {
+                clearStatusTimer();
+                setStatus({ kind: "idle" });
+              }
+            }}
             onKeyDown={handleKeyDown}
             autoFocus
             spellCheck={false}

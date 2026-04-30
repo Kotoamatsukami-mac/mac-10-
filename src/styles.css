@@ -137,6 +137,11 @@ body,
   text-decoration: none;
 }
 
+.strip-status {
+  color: rgba(255, 255, 255, 0.62);
+  text-decoration: none;
+}
+
 .command-input::placeholder {
   color: rgba(255, 255, 255, 0.28);
   font-weight: 300;
