@@ -67,7 +67,7 @@ Do not add stages, reorder stages, rename stages, or create a second spine.
 
 ## Current phase
 
-Current phase: Phase 4 Slice 1 — safe local execution spine.
+Current phase: Phase 4 Slice 2 — outcome feedback in strip.
 
 Already reachable through Enter:
 
@@ -119,7 +119,7 @@ Forbidden user-facing strings: Error, Failed, stack traces, raw enum codes.
 Phase 1 — Draggable strip. Complete.
 Phase 2 — Native Environment Index. Complete.
 Phase 3 — Preview interpretation and ghost completion UI. Complete.
-Phase 4 — Safe local execution spine. Current.
+Phase 4 — Safe local execution spine + outcome feedback. Current.
 Phase 5 — Approval UI and stronger history/undo. Future.
 Phase 6 — Provider interpretation only after local spine is proven. Future.
 
@@ -165,7 +165,7 @@ Refuse to add even if asked:
 - theme system
 - planner or multi-step agent
 - provider-first command path
-- features outside Phase 4 Slice 1 unless explicitly approved in `docs/BUILD_PHASES.md` and `docs/CHECKPOINT.md`
+- features outside Phase 4 unless explicitly approved in `docs/BUILD_PHASES.md` and `docs/CHECKPOINT.md`
 - a second executor or second command spine
 - one-off command functions such as `openSafari()` or `openYoutube()`
 

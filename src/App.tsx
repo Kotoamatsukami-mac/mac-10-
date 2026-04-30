@@ -159,6 +159,13 @@ export default function App() {
     }
   };
 
+  // Status rendering contract:
+  // - Status overlay uses .strip-status + .strip-status-{kind}
+  // - Ghost overlay uses .ghost-completion
+  // - Status wins: ghostVisible = status.kind === "idle" && showGhost
+  // - Keystroke clears status immediately
+  // - Timer auto-clears: ok=1200ms, hint=2500ms, blocked=3000ms
+  // - Strip height fixed at 76px. No second row. No expansion.
   return (
     <div className="strip">
       <div

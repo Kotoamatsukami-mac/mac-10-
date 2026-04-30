@@ -2,9 +2,10 @@
 
 ## Current checkpoint
 
-Phase 4 Slice 1 — Safe local execution spine.
+Phase 4 Slice 2 — Outcome feedback in strip.
 
-Macten currently has the local single-step command spine wired end to end:
+Macten currently has the local single-step command spine wired end to end,
+with user-visible outcome feedback for every submit path:
 
 ```text
 Phase 1: Draggable transparent command strip
@@ -12,6 +13,7 @@ Phase 2: NativeEnvironmentSnapshot from the Mac environment
 Phase 3 Slice 1: NativeEnvironmentIndex + resolvePreview()
 Phase 3 Slice 2: Ghost completion preview UI
 Phase 4 Slice 1: parser → validator → risk → approve → executor → history
+Phase 4 Slice 2: Outcome feedback — StripStatus overlay in strip
 ```
 
 ## Locked architecture
@@ -47,6 +49,35 @@ Registered but intentionally inert:
 
 - `volume.set` — placeholder only, `executable=false`, no bounded native volume command yet.
 
+## Outcome feedback (Phase 4 Slice 2)
+
+Outcome mapping lives in `src/spine/outcomeMessage.ts`.
+Status rendering lives in `src/App.tsx`.
+
+StripStatus kinds: idle, ok, hint, blocked.
+
+Mapping:
+- resolver unavailable → hint: "Index unavailable"
+- no prediction → hint: "Type more"
+- validation needs_more → hint: "Type more"
+- validation choose_one → hint: "Choose one"
+- validation permission_needed → hint: "Allow permission"
+- validation approval_needed → hint: "Confirm"
+- validation unsupported_yet → hint: "Not yet"
+- validation blocked → blocked: "Blocked"
+- approval needs_approval → hint: "Confirm"
+- approval rejected → blocked: "Blocked"
+- execution ok → ok: "Opened {label}"
+- execution failed → hint: "Try again"
+
+Rendering contract:
+- Status overlay uses .strip-status + .strip-status-{kind}
+- Ghost overlay uses .ghost-completion
+- Status wins: ghostVisible = status.kind === "idle" && showGhost
+- Keystroke clears status immediately
+- Auto-clear timers: ok=1200ms, hint=2500ms, blocked=3000ms
+- Strip height fixed at 76px. No second row. No expansion.
+
 ## Execution boundary
 
 - TypeScript executor calls only explicit Tauri commands.
@@ -61,12 +92,10 @@ Registered but intentionally inert:
 
 ## Allowed next work
 
-- Verify Enter execution for the four open-style action families.
-- Tune ghost completion feel and alignment.
-- Improve user-facing guidance mapping for rejected spine outcomes.
-- Add small resolver/spine fixtures or manual checks.
-- Improve typed Rust/TS error surfaces without widening execution authority.
-- Update documentation when a slice is verified.
+- Phase 4 Slice 2.1: harden outcome feedback (no behavior change)
+- Phase 4 Slice 3: bounded volume.set (first safe state mutation)
+- Phase 4 Slice 4: typed Rust executor errors
+- Phase 4 Slice 5: inline disambiguation chooser
 
 ## Forbidden until Phase 5+
 

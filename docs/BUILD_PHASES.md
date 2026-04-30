@@ -106,7 +106,7 @@ Goal: execute the first safe command families through the fixed local spine:
 
 parser → validator → risk → approve → executor → history
 
-### Slice 1 — Open-style execution spine (current)
+### Slice 1 — Open-style execution spine (complete)
 - src/spine/parser.ts
 - src/spine/registry.ts
 - src/spine/validator.ts
@@ -145,6 +145,22 @@ Execution boundary:
 - No destructive filesystem changes
 - No command-specific hacks such as openSafari()
 - New action families must be added through registry → validator → risk → approval → executor → history
+
+### Slice 2 — Outcome feedback in strip (complete)
+- src/spine/outcomeMessage.ts
+- src/App.tsx
+
+Outcome mapping from resolveNow / SpineOutcome to a minimal StripStatus:
+
+- StripStatus kinds: idle, ok, hint, blocked
+- Status wins over ghost: ghostVisible = status.kind === "idle" && showGhost
+- Keystroke clears status immediately
+- Auto-clear timers: ok=1200ms, hint=2500ms, blocked=3000ms
+- Strip height fixed at 76px. No second row. No panel.
+- All user-facing copy lives in outcomeMessage.ts. No strings in App.tsx.
+- Status renders via .strip-status + .strip-status-{kind} classes
+- Ghost renders via .ghost-completion class
+- No silent no-op paths remain. Every submit outcome shows user feedback. ✅
 
 ## Phase 5 — Risk and approval UI
 
