@@ -12,6 +12,26 @@ Macten is not: chat, dashboard, terminal clone, generic AI agent, cloud puppet, 
 
 Every feature must answer one question: does this help the user command their Mac in one sentence? If no, refuse to add it.
 
+## Session rule
+
+Before touching code:
+
+1. `git pull origin main`
+2. Read the exact files you are about to change.
+3. Read the governance docs that apply to the task.
+4. Work from repo truth, not memory of a prior session.
+
+Governance priority:
+
+1. `.github/copilot-instructions.md`
+2. `docs/PRODUCT_CONTRACT.md`
+3. `docs/BUILD_PHASES.md`
+4. `docs/CHECKPOINT.md`
+5. `docs/DECISIONS.md`
+6. `docs/LESSONS.md`
+
+If a proposed change contradicts governance, stop and say so. Do not silently override it.
+
 ## Doctrine
 
 THE MAC IS THE DICTIONARY
@@ -20,11 +40,39 @@ THE COMMAND SPINE IS THE TRUST LAYER
 
 ## Command Spine — fixed, do not rename
 
-native lexicon → parser → resolver → validator → risk → approve → executor → history
+NativeEnvironmentSnapshot → NativeEnvironmentIndex → resolvePreview → parser → validator → risk → approve → executor → history
 
-No provider, no shortcut, no smart path may bypass the spine.
+No provider, shortcut, UI helper, or smart path may bypass the spine.
 
-Code names stay aligned: native_lexicon.rs, parser.rs, resolver.rs, validator.rs, risk.rs, executor.rs, history.rs. Do not introduce alternate names in code or docs.
+Current TypeScript spine files live in `src/spine/`:
+
+- `parser.ts`
+- `registry.ts`
+- `validator.ts`
+- `risk.ts`
+- `approve.ts`
+- `executor.ts`
+- `history.ts`
+- `runSpine.ts`
+
+Do not add stages, reorder stages, rename stages, or create a second spine.
+
+## Current phase
+
+Current phase: Phase 4 Slice 1 — safe local execution spine.
+
+Already reachable through Enter:
+
+- `app.open`
+- `folder.open`
+- `service.open`
+- `settings.open`
+
+Registered but intentionally inert:
+
+- `volume.set` — placeholder only, `executable=false`, no native command yet.
+
+Phase 4 Slice 1 is single-step only. No planner, no multi-step orchestration, no provider model, no destructive operations.
 
 ## Known failure mode — do not reproduce
 
@@ -39,7 +87,7 @@ Rules to prevent this:
 ## Window rules
 
 - Tauri 2, macOS-first, macOSPrivateApi: true
-- width 800, height 76, transparent, undecorated, non-resizable, alwaysOnTop, skipTaskbar
+- width 800, height 76, transparent, undecorated, non-resizable
 - Strip must always be draggable. Pinning never disables drag.
 - Input stays clickable and typeable at all times.
 - No expanded dashboard. Inline panels only.
@@ -59,13 +107,45 @@ Forbidden user-facing strings: Error, Failed, stack traces, raw enum codes.
 
 ## Build phases — implement current phase only
 
-Phase 1 — Draggable strip only. Transparent window, single input, large reliable drag region, pin button. No commands, no parser, no executor.
+Phase 1 — Draggable strip. Complete.
+Phase 2 — Native Environment Index. Complete.
+Phase 3 — Preview interpretation and ghost completion UI. Complete.
+Phase 4 — Safe local execution spine. Current.
+Phase 5 — Approval UI and stronger history/undo. Future.
+Phase 6 — Provider interpretation only after local spine is proven. Future.
 
-Phase 2 — Native Lexicon read-only.
-Phase 3 — Preview interpretation read-only.
-Phase 4 — First five safe commands.
-Phase 5 — Risk and approval.
-Phase 6 — Provider interpretation only after local spine is proven.
+## Execution boundary
+
+The Rust command surface is intentionally minimal.
+
+Currently allowed execution commands:
+
+- `executor_open_path`
+- `executor_open_url`
+
+Rules:
+
+- `executor_open_path` requires the path to exist.
+- `executor_open_url` only allows `http`, `https`, `mailto`, `tel`, and `x-apple.systempreferences` schemes.
+- No AppleScript.
+- No osascript.
+- No free-form shell surface.
+- No destructive filesystem operations.
+- No new Rust execution command without explicit discussion.
+
+## Required checks
+
+After TypeScript changes:
+
+- `npx tsc --noEmit`
+
+After Rust changes:
+
+- `cd src-tauri && cargo check`
+
+Before committing a mixed TS/Rust change, run both.
+
+Use descriptive commit messages. Never commit with messages like `commit`, `update`, or `fix`.
 
 ## Hard refusals
 
@@ -77,5 +157,15 @@ Refuse to add even if asked:
 - planner or multi-step agent
 - provider-first command path
 - features outside the current phase
+- a second executor or second command spine
+- one-off command functions such as `openSafari()` or `openYoutube()`
 
-If a request crosses these lines: state out of scope per PRODUCT_CONTRACT.md, name the phase it belongs to, and stop.
+If a request crosses these lines: state out of scope per `PRODUCT_CONTRACT.md`, name the phase it belongs to, and stop.
+
+## Documentation rule
+
+Docs may not lag behind code.
+
+If a change advances phase reality or changes the executable surface, update `docs/BUILD_PHASES.md` and `docs/CHECKPOINT.md` in the same change set.
+
+If a bug reveals a reusable rule, add it to `docs/LESSONS.md`.
