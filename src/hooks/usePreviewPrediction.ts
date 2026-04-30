@@ -5,11 +5,12 @@
 //
 // Behaviour:
 //  - while typing: prediction is cleared immediately (no ghost shown)
+//  - trailing whitespace suppresses preview so Space acts as "keep typing"
 //  - after ~300ms of no typing: resolvePreview runs against the cached index
 //  - if the index has not yet loaded, prediction stays null silently
 //
-// No execution. No native probes per keystroke. No invoke beyond the single
-// snapshot fetch on mount.
+// No native probes per keystroke. No invoke beyond the single snapshot fetch
+// on mount.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadNativeEnvironment } from "../types/nativeEnvironment";
@@ -23,6 +24,10 @@ import {
 } from "../resolver/previewResolver";
 
 const DEBOUNCE_MS = 300;
+
+function shouldSuppressPreview(input: string): boolean {
+  return !input.trim() || /\s$/.test(input);
+}
 
 export type ResolveNowResult =
   | { kind: "resolved"; prediction: PreviewPrediction | null }
@@ -54,7 +59,7 @@ export function usePreviewPrediction(input: string): PreviewPredictionHandle {
 
   useEffect(() => {
     setPrediction(null);
-    if (!input.trim()) return;
+    if (shouldSuppressPreview(input)) return;
 
     const handle = window.setTimeout(() => {
       const index = indexRef.current;
