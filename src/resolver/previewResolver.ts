@@ -65,7 +65,7 @@ export interface PreviewPrediction {
   target_ref?: PreviewTargetRef;
 }
 
-// ─── Action phrases (non-destructive only) ──────────────────────────────────
+// ─── Action phrases (current open-style surface only) ────────────────────────
 
 const ACTION_PHRASES: readonly string[] = [
   "go to",
@@ -75,11 +75,6 @@ const ACTION_PHRASES: readonly string[] = [
   "start",
   "bring up",
   "pull up",
-  "run",
-  "find",
-  "close",
-  "quit",
-  "hide",
   "switch to",
 ];
 
