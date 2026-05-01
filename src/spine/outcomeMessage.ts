@@ -76,7 +76,21 @@ export function statusFromOutcome(outcome: SpineOutcome): StripStatus {
         msg: `Opened ${trimmed}`,
       };
     }
-    return { kind: "hint", msg: "Try again" };
+    // Map typed executor errors to precise user guidance
+    const errorKind =
+      "error_kind" in outcome.execution
+        ? (outcome.execution as { error_kind: string }).error_kind
+        : "unknown";
+    switch (errorKind) {
+      case "path_not_found":
+        return { kind: "hint", msg: "Not found" };
+      case "disallowed_scheme":
+        return { kind: "blocked", msg: "Not allowed" };
+      case "open_failed":
+        return { kind: "hint", msg: "Couldn't open" };
+      default:
+        return { kind: "hint", msg: "Try again" };
+    }
   }
 
   return { kind: "hint", msg: "Try again" };

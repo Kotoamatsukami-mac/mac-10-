@@ -238,6 +238,9 @@ export function resolvePreview(
   });
 
   const top = candidates[0];
+  if (!top) {
+    return emptyPrediction(rawInput, normalized, actionPhrase);
+  }
   const second = candidates.length > 1 ? candidates[1] : null;
 
   let tier: ConfidenceTier = top.match.tier;
