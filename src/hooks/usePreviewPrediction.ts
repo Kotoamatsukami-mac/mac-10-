@@ -23,7 +23,7 @@ import {
   type PreviewPrediction,
 } from "../resolver/previewResolver";
 
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 100;
 
 function shouldSuppressPreview(input: string): boolean {
   return !input.trim() || /\s$/.test(input);

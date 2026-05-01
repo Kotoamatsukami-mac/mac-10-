@@ -11,7 +11,7 @@ import {
   statusFromResolveNow,
 } from "./spine/outcomeMessage";
 
-const CONTAINS_THRESHOLD = 0.5;
+const CONTAINS_THRESHOLD = 0.28;
 
 function shouldShowGhost(p: PreviewPrediction | null): boolean {
   if (!p || !p.completion) return false;

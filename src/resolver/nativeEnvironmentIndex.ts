@@ -287,6 +287,15 @@ const SERVICE_SEEDS: readonly IndexedEntity[] = [
     url: "https://calendar.google.com",
     identifier: "calendar",
   },
+  {
+    id: "settings_pane:general",
+    label: "System Settings",
+    aliases: aliasesFor("System Settings", ["settings", "preferences", "prefs", "sys settings"]),
+    target_kind: "settings_pane",
+    source: "service_seed",
+    source_boost: SOURCE_BOOSTS.service_seed + 5,
+    identifier: "x-apple.systempreferences:",
+  },
 ];
 
 // ─── Per-source projection ──────────────────────────────────────────────────
