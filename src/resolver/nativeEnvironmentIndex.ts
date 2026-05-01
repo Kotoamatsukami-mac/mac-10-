@@ -24,7 +24,8 @@ export type IndexSource =
   | "live_runtime_state"
   | "permission_capability_map"
   | "grammar"
-  | "service_seed";
+  | "service_seed"
+  | "settings_seed";
 
 export type IndexTargetKind =
   | "app"
@@ -38,6 +39,7 @@ export const SOURCE_BOOSTS: Record<IndexSource, number> = {
   user_preference_signals: 30,
   static_inventory: 10,
   service_seed: 8,
+  settings_seed: 8,
   grammar: 5,
   permission_capability_map: 0,
 };
@@ -52,8 +54,7 @@ export interface IndexedEntity {
   path?: string;
   bundle_id?: string | null;
   url?: string;
-  // Generic executor target identifier. For settings panes this intentionally
-  // stores the full x-apple.systempreferences anchor URL, not the short pane id.
+  // Non-launch identity; URL-capable targets launch through url.
   identifier?: string;
 }
 
@@ -287,14 +288,23 @@ const SERVICE_SEEDS: readonly IndexedEntity[] = [
     url: "https://calendar.google.com",
     identifier: "calendar",
   },
+];
+
+const SETTINGS_SEEDS: readonly IndexedEntity[] = [
   {
     id: "settings_pane:general",
     label: "System Settings",
-    aliases: aliasesFor("System Settings", ["settings", "preferences", "prefs", "sys settings"]),
+    aliases: aliasesFor("System Settings", [
+      "settings",
+      "preferences",
+      "prefs",
+      "sys settings",
+    ]),
     target_kind: "settings_pane",
-    source: "service_seed",
-    source_boost: SOURCE_BOOSTS.service_seed,
-    identifier: "x-apple.systempreferences:",
+    source: "settings_seed",
+    source_boost: SOURCE_BOOSTS.settings_seed,
+    url: "x-apple.systempreferences:",
+    identifier: "general",
   },
 ];
 
@@ -391,9 +401,8 @@ function indexSettingsPane(pane: SettingsPane): IndexedEntity {
     target_kind: "settings_pane",
     source: "static_inventory",
     source_boost: SOURCE_BOOSTS.static_inventory,
-    // Store the launchable anchor URL in the generic executor identifier slot.
-    // The short Rust pane identifier remains encoded in the entity id/aliases.
-    identifier: pane.anchor,
+    url: pane.anchor,
+    identifier: pane.identifier,
   };
 }
 
@@ -450,6 +459,7 @@ export function buildNativeEnvironmentIndex(
   }
 
   for (const seed of SERVICE_SEEDS) entities.push(seed);
+  for (const seed of SETTINGS_SEEDS) entities.push(seed);
 
   const byAlias = new Map<string, IndexedEntity[]>();
   for (const e of entities) {

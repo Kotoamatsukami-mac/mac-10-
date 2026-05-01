@@ -67,7 +67,21 @@ export interface PreviewPrediction {
 
 // ─── Action phrases (non-destructive only) ──────────────────────────────────
 
-const ACTION_PHRASES: readonly string[] = ["go to", "open", "launch", "show"];
+const ACTION_PHRASES: readonly string[] = [
+  "go to",
+  "open",
+  "launch",
+  "show",
+  "start",
+  "bring up",
+  "pull up",
+  "run",
+  "find",
+  "close",
+  "quit",
+  "hide",
+  "switch to",
+];
 
 function stripActionPhrase(normalized: string): {
   phrase: string | null;
@@ -204,6 +218,20 @@ function emptyPrediction(
 
 // ─── Public resolver ────────────────────────────────────────────────────────
 
+// URL-openable kinds are preferred over path-openable kinds on tie,
+// because URL openers are more reliable across macOS versions.
+const TARGET_KIND_RANK: Record<string, number> = {
+  settings_pane: 3,
+  service: 2,
+  app: 1,
+  folder: 1,
+  volume: 0,
+};
+
+function targetKindRank(kind: string): number {
+  return TARGET_KIND_RANK[kind] ?? 0;
+}
+
 export function resolvePreview(
   rawInput: string,
   index: NativeEnvironmentIndex,
@@ -234,6 +262,10 @@ export function resolvePreview(
     if (TIER_RANK[b.match.tier] !== TIER_RANK[a.match.tier]) {
       return TIER_RANK[b.match.tier] - TIER_RANK[a.match.tier];
     }
+    const kindDiff =
+      targetKindRank(b.entity.target_kind) -
+      targetKindRank(a.entity.target_kind);
+    if (kindDiff !== 0) return kindDiff;
     return a.entity.label.localeCompare(b.entity.label);
   });
 

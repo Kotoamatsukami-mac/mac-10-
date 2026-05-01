@@ -60,7 +60,8 @@ export async function executeCommand(
         await invoke<void>("executor_open_path", { path });
         return { kind: "ok" };
       }
-      case "service.open": {
+      case "service.open":
+      case "settings.open": {
         const url = cmd.target_ref.url;
         if (!url)
           return {
@@ -69,17 +70,6 @@ export async function executeCommand(
             reason: "no url on target_ref",
           };
         await invoke<void>("executor_open_url", { url });
-        return { kind: "ok" };
-      }
-      case "settings.open": {
-        const identifier = cmd.target_ref.identifier;
-        if (!identifier)
-          return {
-            kind: "failed",
-            error_kind: "unknown",
-            reason: "no identifier on target_ref",
-          };
-        await invoke<void>("executor_open_url", { url: identifier });
         return { kind: "ok" };
       }
       case "volume.set":

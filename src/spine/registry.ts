@@ -46,7 +46,7 @@ export const COMMAND_REGISTRY: ReadonlyArray<RegistryEntry> = [
   {
     action: "settings.open",
     targetKinds: ["settings_pane"],
-    required: ["identifier"],
+    required: ["url"],
     executable: true,
   },
   {
