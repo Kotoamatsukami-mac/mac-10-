@@ -293,7 +293,7 @@ const SERVICE_SEEDS: readonly IndexedEntity[] = [
     aliases: aliasesFor("System Settings", ["settings", "preferences", "prefs", "sys settings"]),
     target_kind: "settings_pane",
     source: "service_seed",
-    source_boost: SOURCE_BOOSTS.service_seed + 5,
+    source_boost: SOURCE_BOOSTS.service_seed,
     identifier: "x-apple.systempreferences:",
   },
 ];
