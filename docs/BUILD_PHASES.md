@@ -69,12 +69,14 @@ Deliverable: typed NativeEnvironmentSnapshot from Rust to frontend. ✅
 - No target-specific parser branches
 - New actions only through registry → validator → risk → approve → executor → history
 
-## Phase 4.5 — Live state hydration (next)
+## Phase 4.5 — Live runtime state hydration (complete)
 
-- Make running_apps and frontmost_app available in NativeEnvironmentSnapshot
-- Source_boost running apps for quit/hide/focus intents
-- Source_boost installed (not running) apps for open intent
-- Do not add new verbs, only improve resolution quality
+- `read_running_apps()` — real NSWorkspace.runningApplications via objc2
+- `read_frontmost_app()` — real NSWorkspace.frontmostApplication via objc2
+- Running apps indexed as target_kind "app" with source "live_runtime_state"
+- Intent-aware scoring: open prefers launchable, quit/hide/focus prefer running
+- No new actions added — surface remains exactly 12 actions
+- Validation contracts unchanged: app.open requires path, quit/hide/focus require bundle_id ✅
 
 ## Phase 5 — Approval UI + durable history + undo
 

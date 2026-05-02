@@ -569,14 +569,75 @@ fn read_menu_bar_agents() -> Reading<Vec<LaunchAgent>> {
 // ─── live_runtime_state readers ─────────────────────────────────────────────
 
 fn read_running_apps() -> Reading<Vec<RunningApp>> {
-    Reading::Unavailable {
-        reason: "NSWorkspace.runningApplications binding deferred".into(),
+    use objc2_app_kit::{NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace};
+
+    let workspace = NSWorkspace::sharedWorkspace();
+    let apps = workspace.runningApplications();
+    let count = apps.count();
+    let mut result = Vec::with_capacity(count);
+
+    for i in 0..count {
+        let app: &NSRunningApplication = &apps.objectAtIndex(i);
+
+        // Skip background-only apps (daemons, agents) — they are not
+        // user-visible and would pollute the resolver index.
+        let policy = app.activationPolicy();
+        if policy != NSApplicationActivationPolicy::Regular {
+            continue;
+        }
+
+        let display_name = app
+            .localizedName()
+            .map(|s| s.to_string())
+            .unwrap_or_default();
+
+        if display_name.is_empty() {
+            continue;
+        }
+
+        let bundle_id = app.bundleIdentifier().map(|s| s.to_string());
+        let pid = app.processIdentifier();
+        let is_active = app.isActive();
+
+        result.push(RunningApp {
+            bundle_id,
+            display_name,
+            pid,
+            is_active,
+        });
     }
+
+    Reading::Available { data: result }
 }
 
 fn read_frontmost_app() -> Reading<Option<RunningApp>> {
-    Reading::Unavailable {
-        reason: "NSWorkspace.frontmostApplication binding deferred".into(),
+    use objc2_app_kit::NSWorkspace;
+
+    let workspace = NSWorkspace::sharedWorkspace();
+    let Some(app) = workspace.frontmostApplication() else {
+        return Reading::Available { data: None };
+    };
+
+    let display_name = app
+        .localizedName()
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+
+    if display_name.is_empty() {
+        return Reading::Available { data: None };
+    }
+
+    let bundle_id = app.bundleIdentifier().map(|s| s.to_string());
+    let pid = app.processIdentifier();
+    let is_active = app.isActive();
+
+    Reading::Available {
+        data: Some(RunningApp {
+            bundle_id,
+            display_name,
+            pid,
+            is_active,
+        }),
     }
 }
 

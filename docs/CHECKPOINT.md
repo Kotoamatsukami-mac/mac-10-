@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-Phase 4 Slice 3 — Phrase grammar + app verbs + volume (12 executable actions).
+Phase 4.5 — Live runtime state hydration + intent-aware resolution.
 
 ```text
 Phase 1: Draggable transparent command strip
@@ -12,7 +12,30 @@ Phase 3 Slice 2: Ghost completion preview UI
 Phase 4 Slice 1: parser → validator → risk → approve → executor → history
 Phase 4 Slice 2: Outcome feedback — StripStatus overlay in strip
 Phase 4 Slice 3: Phrase grammar, app verbs (quit/hide/focus), volume control
+Phase 4.5: Live runtime hydration — running_apps + frontmost_app are real native data
 ```
+
+## Live runtime state (Phase 4.5)
+
+NativeEnvironmentSnapshot now includes real native data for:
+- `running_apps` — NSWorkspace.runningApplications via objc2, filtered to regular activation policy
+- `frontmost_app` — NSWorkspace.frontmostApplication via objc2
+
+Running apps are indexed as `target_kind: "app"` with `source: "live_runtime_state"`.
+They have `bundle_id` but may lack a launchable `path`.
+
+Intent-aware resolution:
+- `open` intent prefers launchable static inventory (apps with paths)
+- `quit`/`hide`/`focus` intents prefer live runtime state (currently running apps)
+- The same target word resolves differently depending on the verb
+- No target-name branching — scoring uses generic `intentSourceModifier`
+
+Validation contracts unchanged:
+- `app.open` requires `path`
+- `app.quit`/`hide`/`focus` require `bundle_id`
+- A live-only app without path passes quit/hide/focus but fails open
+
+The executable surface remains exactly 12 actions. No new actions added.
 
 ## Locked architecture
 

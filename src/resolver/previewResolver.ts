@@ -186,15 +186,34 @@ interface Candidate {
   score: number;
 }
 
-function candidateFor(entity: IndexedEntity, match: AliasMatch): Candidate {
+// Intent changes source priority. The same target word may resolve differently
+// depending on the verb. Open prefers launchable inventory (static apps with
+// paths). Quit, hide, and focus prefer live runtime state (currently running
+// apps). This modifier is generic — it does not branch on target names.
+function intentSourceModifier(intent: IntentVerb, entity: IndexedEntity): number {
+  if (entity.target_kind !== "app") return 0;
+
+  const isLive = entity.source === "live_runtime_state";
+  const isRuntime = intent === "quit" || intent === "hide" || intent === "focus";
+  const isLaunch = intent === "open";
+
+  if (isRuntime && isLive) return 15;   // prefer running app for runtime verbs
+  if (isRuntime && !isLive) return -10; // demote static for runtime verbs
+  if (isLaunch && !isLive) return 5;    // prefer launchable for open
+  if (isLaunch && isLive) return -5;    // demote live-only for open (may lack path)
+
+  return 0;
+}
+
+function candidateFor(entity: IndexedEntity, match: AliasMatch, intent: IntentVerb): Candidate {
   return {
     entity,
     match,
-    score: match.base + entity.source_boost,
+    score: match.base + entity.source_boost + intentSourceModifier(intent, entity),
   };
 }
 
-function exactCandidates(target: string, index: NativeEnvironmentIndex): Candidate[] {
+function exactCandidates(target: string, index: NativeEnvironmentIndex, intent: IntentVerb): Candidate[] {
   const exact = index.byAlias.get(target);
   if (!exact) return [];
   return exact.map((entity) =>
@@ -202,19 +221,20 @@ function exactCandidates(target: string, index: NativeEnvironmentIndex): Candida
       tier: "exact",
       base: TIER_BASE.exact,
       alias: target,
-    }),
+    }, intent),
   );
 }
 
 function prefixAndContainsCandidates(
   target: string,
   index: NativeEnvironmentIndex,
+  intent: IntentVerb,
 ): Candidate[] {
   const candidates: Candidate[] = [];
   for (const entity of index.entities) {
     const match = bestAliasMatch(target, entity.aliases);
     if (!match || match.tier === "exact") continue;
-    candidates.push(candidateFor(entity, match));
+    candidates.push(candidateFor(entity, match, intent));
   }
   return candidates;
 }
@@ -328,9 +348,9 @@ export function resolvePreview(
 
   // Fast path: exact alias lookup uses the prebuilt alias index. Prefix and
   // contains matches still scan entities because they need partial matching.
-  const candidates = exactCandidates(target, index);
+  const candidates = exactCandidates(target, index, intent.verb);
   if (candidates.length === 0) {
-    candidates.push(...prefixAndContainsCandidates(target, index));
+    candidates.push(...prefixAndContainsCandidates(target, index, intent.verb));
   }
 
   if (candidates.length === 0) {

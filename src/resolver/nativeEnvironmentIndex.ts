@@ -458,6 +458,25 @@ export function buildNativeEnvironmentIndex(
     for (const vol of volumes.data) entities.push(indexVolume(vol));
   }
 
+  // Live running apps — indexed as target_kind "app" with source "live_runtime_state".
+  // These entities have bundle_id but may lack a launchable path. The validator
+  // distinguishes: app.open requires path; app.quit/hide/focus require bundle_id.
+  const running = snapshot.live_runtime_state.running_apps;
+  if (running.kind === "available") {
+    for (const app of running.data) {
+      if (!app.bundle_id) continue;
+      entities.push({
+        id: `running:${app.bundle_id}`,
+        label: app.display_name,
+        aliases: aliasesFor(app.display_name),
+        target_kind: "app",
+        source: "live_runtime_state",
+        source_boost: SOURCE_BOOSTS.live_runtime_state,
+        bundle_id: app.bundle_id,
+      });
+    }
+  }
+
   for (const seed of SERVICE_SEEDS) entities.push(seed);
   for (const seed of SETTINGS_SEEDS) entities.push(seed);
 

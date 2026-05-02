@@ -181,7 +181,7 @@ test("missing launch fields fail validation before executor", () => {
   });
 });
 
-test("equal candidates remain ambiguous without target-kind priority", () => {
+test("intent-aware scoring: open prefers app over folder when both match", () => {
   const prediction = resolveRequired("open shared target", [
     {
       id: "app:shared-target",
@@ -203,12 +203,10 @@ test("equal candidates remain ambiguous without target-kind priority", () => {
     },
   ]);
 
-  assert.equal(prediction.confidence_tier, "ambiguous");
-  assert.deepEqual(validateCommand(parseCommand(prediction)), {
-    kind: "invalid",
-    guidance: "choose_one",
-    reason: "multiple candidates tied at the top",
-  });
+  // Intent-aware scoring: open intent gives +5 to static app, breaking the tie.
+  // The app wins because open prefers launchable inventory.
+  assert.equal(prediction.confidence_tier, "exact");
+  assert.equal(prediction.target_kind, "app");
 });
 
 test("generic source boost may decide between otherwise matching candidates", () => {

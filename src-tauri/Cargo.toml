@@ -21,7 +21,7 @@ plist = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", features = ["NSString", "NSArray"] }
-objc2-app-kit = { version = "0.3", features = ["NSRunningApplication"] }
+objc2-app-kit = { version = "0.3", features = ["NSRunningApplication", "NSWorkspace", "NSApplication"] }
 
 [profile.release]
 panic = "abort"
