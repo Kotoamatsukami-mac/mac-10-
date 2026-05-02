@@ -1,8 +1,10 @@
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+mod app_executor;
 mod executor;
 mod native_environment;
+mod volume_executor;
 
 #[tauri::command]
 fn set_pinned(app: tauri::AppHandle, pinned: bool) -> Result<(), String> {
@@ -17,7 +19,13 @@ pub fn run() {
             set_pinned,
             native_environment::get_native_environment_snapshot,
             executor::executor_open_path,
-            executor::executor_open_url
+            executor::executor_open_url,
+            app_executor::executor_quit_app,
+            app_executor::executor_hide_app,
+            app_executor::executor_focus_app,
+            volume_executor::executor_set_volume,
+            volume_executor::executor_set_mute,
+            volume_executor::executor_step_volume
         ])
         .setup(|app| {
             let focus_shortcut =

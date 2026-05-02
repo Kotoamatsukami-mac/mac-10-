@@ -26,7 +26,7 @@ const CONTAINS_THRESHOLD = 0.5;
 function fieldValue(
   ref: PreviewTargetRef,
   field: RequiredField,
-): string | null | undefined {
+): string | number | null | undefined {
   switch (field) {
     case "path":
       return ref.path;
@@ -36,7 +36,17 @@ function fieldValue(
       return ref.identifier;
     case "bundle_id":
       return ref.bundle_id;
+    case "numeric_arg":
+      return ref.numeric_arg;
   }
+}
+
+function isPresent(v: string | number | null | undefined): boolean {
+  // 0 is a valid numeric_arg (volume 0 = silence). Treat null/undefined/empty
+  // string as missing; treat any finite number as present.
+  if (v === null || v === undefined) return false;
+  if (typeof v === "number") return Number.isFinite(v);
+  return v.length > 0;
 }
 
 export function validateCommand(cmd: ParsedCommand): ValidationStatus {
@@ -75,7 +85,7 @@ export function validateCommand(cmd: ParsedCommand): ValidationStatus {
 
   for (const field of entry.required) {
     const v = fieldValue(cmd.target_ref, field);
-    if (!v) {
+    if (!isPresent(v)) {
       return {
         kind: "invalid",
         guidance: "needs_more",

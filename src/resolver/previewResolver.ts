@@ -14,6 +14,7 @@ import {
   type NativeEnvironmentIndex,
   normalizeText,
 } from "./nativeEnvironmentIndex";
+import { classifyIntent, type IntentVerb } from "./phraseGrammar";
 
 export type ConfidenceTier =
   | "exact"
@@ -25,10 +26,17 @@ export type ConfidenceTier =
 
 export type PreviewActionKind =
   | "open_app"
+  | "quit_app"
+  | "hide_app"
+  | "focus_app"
   | "open_folder"
   | "open_service"
   | "open_settings_pane"
   | "set_volume"
+  | "mute_volume"
+  | "unmute_volume"
+  | "step_volume_up"
+  | "step_volume_down"
   | "unknown";
 
 export type PreviewTargetKind =
@@ -37,6 +45,7 @@ export type PreviewTargetKind =
   | "service"
   | "settings_pane"
   | "volume"
+  | "system_audio"
   | "unknown";
 
 export type PreviewSource = IndexSource;
@@ -48,12 +57,17 @@ export interface PreviewTargetRef {
   bundle_id?: string | null;
   url?: string;
   identifier?: string;
+  // Numeric argument for quantified verbs (e.g. volume.set 50). Resolver
+  // extracts and clamps; executor consumes as-is.
+  numeric_arg?: number;
 }
 
 export interface PreviewPrediction {
   raw_input: string;
   normalized_input: string;
   action_phrase: string | null;
+  // Intent verb classified from the user's prefix; "open" by default.
+  intent: IntentVerb;
   action_kind: PreviewActionKind;
   target_kind: PreviewTargetKind;
   completion: string;
@@ -65,46 +79,63 @@ export interface PreviewPrediction {
   target_ref?: PreviewTargetRef;
 }
 
-// ─── Action phrases (current open-style surface only) ────────────────────────
+// ─── Action phrases ─────────────────────────────────────────────────────────
+//
+// Verb classification lives in src/resolver/phraseGrammar.ts. Resolvers below
+// only consume the classified IntentVerb; this file no longer maintains a
+// flat ACTION_PHRASES list.
 
-const ACTION_PHRASES: readonly string[] = [
-  "go to",
-  "open",
-  "launch",
-  "show",
-  "start",
-  "bring up",
-  "pull up",
-  "switch to",
-];
+// ─── Intent → action_kind mapping ───────────────────────────────────────────
+//
+// Combines the classified intent verb with the resolved entity's target_kind
+// to produce a single action_kind. Returns "unknown" when the (intent, kind)
+// pair has no registered action — the validator turns that into a typed
+// guidance state at the boundary.
 
-function stripActionPhrase(normalized: string): {
-  phrase: string | null;
-  rest: string;
-} {
-  for (const phrase of ACTION_PHRASES) {
-    if (normalized === phrase) return { phrase, rest: "" };
-    if (normalized.startsWith(phrase + " ")) {
-      return { phrase, rest: normalized.slice(phrase.length + 1).trim() };
-    }
+function actionKindFor(
+  intent: IntentVerb,
+  targetKind: IndexTargetKind,
+): PreviewActionKind {
+  switch (intent) {
+    case "open":
+      switch (targetKind) {
+        case "app":
+          return "open_app";
+        case "folder":
+        case "volume":
+          return "open_folder";
+        case "service":
+          return "open_service";
+        case "settings_pane":
+          return "open_settings_pane";
+      }
+      return "unknown";
+    case "quit":
+      return targetKind === "app" ? "quit_app" : "unknown";
+    case "hide":
+      return targetKind === "app" ? "hide_app" : "unknown";
+    case "focus":
+      return targetKind === "app" ? "focus_app" : "unknown";
+    case "volume_set":
+      return "set_volume";
+    case "volume_mute":
+      return "mute_volume";
+    case "volume_unmute":
+      return "unmute_volume";
+    case "volume_up":
+      return "step_volume_up";
+    case "volume_down":
+      return "step_volume_down";
   }
-  return { phrase: null, rest: normalized };
 }
 
-function actionKindFor(targetKind: IndexTargetKind): PreviewActionKind {
-  switch (targetKind) {
-    case "app":
-      return "open_app";
-    case "folder":
-      return "open_folder";
-    case "volume":
-      return "open_folder";
-    case "service":
-      return "open_service";
-    case "settings_pane":
-      return "open_settings_pane";
-  }
-}
+const VOLUME_INTENTS: ReadonlySet<IntentVerb> = new Set([
+  "volume_set",
+  "volume_mute",
+  "volume_unmute",
+  "volume_up",
+  "volume_down",
+]);
 
 // ─── Scoring ────────────────────────────────────────────────────────────────
 
@@ -193,6 +224,7 @@ function prefixAndContainsCandidates(
 function emptyPrediction(
   raw: string,
   normalized: string,
+  intent: IntentVerb,
   actionPhrase: string | null,
 ): PreviewPrediction {
   const display = actionPhrase ?? raw.trim();
@@ -200,6 +232,7 @@ function emptyPrediction(
     raw_input: raw,
     normalized_input: normalized,
     action_phrase: actionPhrase,
+    intent,
     action_kind: "unknown",
     target_kind: "unknown",
     completion: "",
@@ -208,6 +241,58 @@ function emptyPrediction(
     confidence_tier: "no_match",
     executable: false,
     source: "grammar",
+  };
+}
+
+// ─── System-audio (volume) synthetic prediction ─────────────────────────────
+//
+// Volume verbs do not resolve against a NativeEnvironmentIndex entity —
+// the target is the system audio output, which is implicit. We synthesize
+// a PreviewPrediction with target_kind="system_audio" so the rest of the
+// spine treats volume on the same rails as every other action.
+
+function systemAudioPrediction(
+  raw: string,
+  normalized: string,
+  intent: IntentVerb,
+  actionPhrase: string | null,
+  numericArg: number | null,
+): PreviewPrediction {
+  const labelByIntent: Record<string, string> = {
+    volume_set: "Volume",
+    volume_mute: "Mute",
+    volume_unmute: "Unmute",
+    volume_up: "Volume up",
+    volume_down: "Volume down",
+  };
+  const label = labelByIntent[intent] ?? "Volume";
+
+  // Clamp 0..100 at the boundary so the executor receives a bounded value.
+  let clamped: number | undefined;
+  if (numericArg !== null) {
+    clamped = Math.max(0, Math.min(100, Math.round(numericArg)));
+  }
+
+  const targetRef: PreviewTargetRef = {
+    id: "system_audio:default_output",
+    label,
+  };
+  if (clamped !== undefined) targetRef.numeric_arg = clamped;
+
+  return {
+    raw_input: raw,
+    normalized_input: normalized,
+    action_phrase: actionPhrase,
+    intent,
+    action_kind: actionKindFor(intent, "app" /* unused for volume */),
+    target_kind: "system_audio",
+    completion: "",
+    display_label: clamped !== undefined ? `${label} ${clamped}` : label,
+    confidence: 1,
+    confidence_tier: "exact",
+    executable: false,
+    source: "grammar",
+    target_ref: targetRef,
   };
 }
 
@@ -220,11 +305,25 @@ export function resolvePreview(
   const normalized = normalizeText(rawInput);
   if (!normalized) return null;
 
-  const { phrase: actionPhrase, rest } = stripActionPhrase(normalized);
-  const target = rest.trim();
+  const intent = classifyIntent(rawInput);
+  const actionPhrase = intent.phrase;
+  const target = intent.rest.trim();
+
+  // Volume verbs short-circuit: target is the system audio output, not an
+  // index entity. Synthesize a typed prediction and let the spine validate
+  // numeric arguments / executable status downstream.
+  if (VOLUME_INTENTS.has(intent.verb)) {
+    return systemAudioPrediction(
+      rawInput,
+      normalized,
+      intent.verb,
+      actionPhrase,
+      intent.numeric_arg,
+    );
+  }
 
   if (!target) {
-    return emptyPrediction(rawInput, normalized, actionPhrase);
+    return emptyPrediction(rawInput, normalized, intent.verb, actionPhrase);
   }
 
   // Fast path: exact alias lookup uses the prebuilt alias index. Prefix and
@@ -235,7 +334,7 @@ export function resolvePreview(
   }
 
   if (candidates.length === 0) {
-    return emptyPrediction(rawInput, normalized, actionPhrase);
+    return emptyPrediction(rawInput, normalized, intent.verb, actionPhrase);
   }
 
   candidates.sort((a, b) => {
@@ -248,7 +347,7 @@ export function resolvePreview(
 
   const top = candidates[0];
   if (!top) {
-    return emptyPrediction(rawInput, normalized, actionPhrase);
+    return emptyPrediction(rawInput, normalized, intent.verb, actionPhrase);
   }
   const second = candidates.length > 1 ? candidates[1] : null;
 
@@ -288,7 +387,8 @@ export function resolvePreview(
     raw_input: rawInput,
     normalized_input: normalized,
     action_phrase: actionPhrase,
-    action_kind: actionKindFor(top.entity.target_kind),
+    intent: intent.verb,
+    action_kind: actionKindFor(intent.verb, top.entity.target_kind),
     target_kind: top.entity.target_kind,
     completion,
     display_label: displayLabel,

@@ -1,8 +1,9 @@
 // Phase 4 — Risk classifier
 //
-// Three levels for this slice: safe / attention / blocked. No destructive
-// operations are reachable, so the surface is simple — open-style actions
-// are safe and anything unknown is blocked.
+// Three levels: safe / attention / blocked. Open-style and focus-style
+// actions are reversible (relaunch, unhide, refocus, raise volume back).
+// All volume actions are clamped 0..100 at the resolver boundary, so they
+// are bounded and reversible too. No destructive operations are reachable.
 
 import type { ParsedCommand } from "./parser";
 
@@ -20,6 +21,21 @@ export function assessRisk(cmd: ParsedCommand): RiskAssessment {
         level: "safe",
         reason: "launches an installed application via LaunchServices",
       };
+    case "app.quit":
+      return {
+        level: "safe",
+        reason: "asks a running app to terminate; reversible by relaunching",
+      };
+    case "app.hide":
+      return {
+        level: "safe",
+        reason: "hides a running app's windows; reversible by refocusing",
+      };
+    case "app.focus":
+      return {
+        level: "safe",
+        reason: "brings a running app to the front",
+      };
     case "folder.open":
       return {
         level: "safe",
@@ -36,12 +52,21 @@ export function assessRisk(cmd: ParsedCommand): RiskAssessment {
         reason: "opens a System Settings pane",
       };
     case "volume.set":
-      // Currently unreachable because registry.ts keeps volume.set
-      // executable=false. This risk classification documents the intended
-      // approval posture for the future bounded volume slice.
       return {
-        level: "attention",
-        reason: "modifies system audio output",
+        level: "safe",
+        reason: "sets system audio output level (clamped 0..100)",
+      };
+    case "volume.mute":
+    case "volume.unmute":
+      return {
+        level: "safe",
+        reason: "toggles system audio mute state",
+      };
+    case "volume.step_up":
+    case "volume.step_down":
+      return {
+        level: "safe",
+        reason: "steps system audio output level by a fixed increment",
       };
     case "unknown":
       return {

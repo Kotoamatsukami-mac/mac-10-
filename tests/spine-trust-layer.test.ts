@@ -43,10 +43,15 @@ function predictionFor(
   return {
     raw_input: "fixture",
     normalized_input: "fixture",
+    action_phrase: null,
+    intent: "open",
+    action_kind: "open_app",
     completion: "",
     display_label: target_ref?.label ?? "fixture",
     confidence: 1,
     confidence_tier: "exact",
+    executable: false,
+    source: "static_inventory",
     target_kind,
     target_ref,
     ...overrides,
@@ -93,20 +98,63 @@ function outcomeFor(partial: Partial<SpineOutcome>): SpineOutcome {
 // ─── Registry ↔ Rust executor contract ──────────────────────────────────────
 
 test("every executable registry action is backed by a Rust command", () => {
-  const rust = readFileSync("src-tauri/src/executor.rs", "utf8");
+  // Rust executor surface is split across three modules: open-style targets
+  // in executor.rs, app verbs in app_executor.rs, volume in volume_executor.rs.
+  // We concatenate before searching so the test holds regardless of where a
+  // future command lives.
+  const rust =
+    readFileSync("src-tauri/src/executor.rs", "utf8") +
+    "\n" +
+    readFileSync("src-tauri/src/app_executor.rs", "utf8") +
+    "\n" +
+    readFileSync("src-tauri/src/volume_executor.rs", "utf8");
   const lib = readFileSync("src-tauri/src/lib.rs", "utf8");
   const tsExecutor = readFileSync("src/spine/executor.ts", "utf8");
 
-  for (const cmd of ["executor_open_path", "executor_open_url"]) {
+  const expectedRustCommands = [
+    "executor_open_path",
+    "executor_open_url",
+    "executor_quit_app",
+    "executor_hide_app",
+    "executor_focus_app",
+    "executor_set_volume",
+    "executor_set_mute",
+    "executor_step_volume",
+  ];
+
+  for (const cmd of expectedRustCommands) {
     assert.ok(tsExecutor.includes(`"${cmd}"`), `TS executor must invoke ${cmd}`);
     assert.ok(rust.includes(`pub fn ${cmd}(`), `Rust must define ${cmd}`);
     assert.ok(lib.includes(cmd), `lib.rs invoke_handler must register ${cmd}`);
   }
 
+  // Every executable=true entry must declare at least one required field
+  // that the Rust surface knows how to consume, OR be a parameter-free
+  // action (volume.mute / unmute / step_up / step_down) where the action
+  // itself fully encodes intent.
+  const consumedFields = new Set([
+    "path",
+    "url",
+    "bundle_id",
+    "numeric_arg",
+  ]);
+  const parameterlessActions = new Set([
+    "volume.mute",
+    "volume.unmute",
+    "volume.step_up",
+    "volume.step_down",
+  ]);
   for (const entry of COMMAND_REGISTRY) {
     if (!entry.executable) continue;
-    const requires = new Set(entry.required);
-    const reaches = requires.has("path") || requires.has("url");
+    if (parameterlessActions.has(entry.action)) {
+      assert.equal(
+        entry.required.length,
+        0,
+        `${entry.action} should require no fields`,
+      );
+      continue;
+    }
+    const reaches = entry.required.some((f) => consumedFields.has(f));
     assert.ok(
       reaches,
       `executable action ${entry.action} requires fields none of the Rust commands consume`,
@@ -125,13 +173,31 @@ test("inert registry entries declare no required fields", () => {
   }
 });
 
-test("actionFromTargetKind covers every kind referenced by the registry", () => {
-  for (const entry of COMMAND_REGISTRY) {
-    for (const kind of entry.targetKinds) {
+test("actionFromTargetKind defaults to the open verb for each open-style kind", () => {
+  // The single-arg shim treats absence of intent as "open". Every kind whose
+  // open-verb registry entry exists should resolve through it.
+  const cases: ReadonlyArray<[string, ActionKind]> = [
+    ["app", "app.open"],
+    ["folder", "folder.open"],
+    ["volume", "folder.open"],
+    ["service", "service.open"],
+    ["settings_pane", "settings.open"],
+    ["system_audio", "volume.set"],
+  ];
+  for (const [kind, expected] of cases) {
+    if (kind === "system_audio") {
+      // system_audio has no "open" intent registered; the default-shim should
+      // return null because no entry pairs (open, system_audio).
       assert.equal(
         actionFromTargetKind(kind),
-        entry.action,
-        `target_kind ${kind} should resolve to ${entry.action}`,
+        null,
+        "system_audio is not an open-style target",
+      );
+    } else {
+      assert.equal(
+        actionFromTargetKind(kind),
+        expected,
+        `target_kind ${kind} should default to ${expected} under the open verb`,
       );
     }
   }
@@ -147,15 +213,20 @@ test("validator: unknown action → needs_more", () => {
   if (v.kind === "invalid") assert.equal(v.guidance, "needs_more");
 });
 
-test("validator: inert registry action → unsupported_yet", () => {
+test("validator: requires numeric_arg on volume.set", () => {
+  // Pair the volume_set intent with the system_audio target_kind but omit the
+  // numeric_arg field. Validator must catch it and return needs_more.
   const v = validateCommand({
-    raw_input: "set volume to 50",
+    raw_input: "set volume",
     action: "volume.set",
-    target_ref: null,
-    prediction: predictionFor("volume", null),
+    target_ref: { id: "system_audio:default_output", label: "Volume" },
+    prediction: predictionFor("system_audio", {
+      id: "system_audio:default_output",
+      label: "Volume",
+    }, { intent: "volume_set", action_kind: "set_volume" }),
   });
   assert.equal(v.kind, "invalid");
-  if (v.kind === "invalid") assert.equal(v.guidance, "unsupported_yet");
+  if (v.kind === "invalid") assert.equal(v.guidance, "needs_more");
 });
 
 test("validator: missing target_ref → needs_more", () => {
@@ -231,16 +302,44 @@ test("risk + approval: open-style actions auto-approve", () => {
   }
 });
 
-test("risk + approval: volume.set pauses on attention (Phase 5 surface)", () => {
-  const decision = approve(
-    assessRisk({
-      raw_input: "set volume to 50",
-      action: "volume.set",
-      target_ref: null,
-      prediction: predictionFor("volume", null),
-    }),
-  );
-  assert.equal(decision.kind, "needs_approval");
+test("risk + approval: volume actions auto-approve (clamped + reversible)", () => {
+  for (const action of [
+    "volume.set",
+    "volume.mute",
+    "volume.unmute",
+    "volume.step_up",
+    "volume.step_down",
+  ] as const) {
+    const decision = approve(
+      assessRisk({
+        raw_input: "x",
+        action,
+        target_ref: null,
+        prediction: predictionFor("system_audio", null, {
+          intent: "volume_set",
+        }),
+      }),
+    );
+    assert.equal(
+      decision.kind,
+      "auto_approved",
+      `${action} should auto-approve (clamped 0..100 or trivially reversible)`,
+    );
+  }
+});
+
+test("risk + approval: app verbs auto-approve (reversible)", () => {
+  for (const action of ["app.quit", "app.hide", "app.focus"] as const) {
+    const decision = approve(
+      assessRisk({
+        raw_input: "x",
+        action,
+        target_ref: null,
+        prediction: predictionFor("app", null),
+      }),
+    );
+    assert.equal(decision.kind, "auto_approved", `${action} should auto-approve`);
+  }
 });
 
 test("risk + approval: unknown action is rejected outright", () => {
@@ -339,7 +438,7 @@ test("statusFromResolveNow: unavailable index becomes a hint", () => {
 });
 
 test("statusFromResolveNow: empty input yields a hint, not silence", () => {
-  const s = statusFromResolveNow({ kind: "ready", prediction: null });
+  const s = statusFromResolveNow({ kind: "resolved", prediction: null });
   assert.deepEqual(s, { kind: "hint", msg: "Type more" });
 });
 
@@ -355,10 +454,17 @@ test("ActionKind set matches the registry exactly", () => {
   const registryActions: ActionKind[] = COMMAND_REGISTRY.map((e) => e.action);
   const expected: ActionKind[] = [
     "app.open",
+    "app.quit",
+    "app.hide",
+    "app.focus",
     "folder.open",
     "service.open",
     "settings.open",
     "volume.set",
+    "volume.mute",
+    "volume.unmute",
+    "volume.step_up",
+    "volume.step_down",
   ];
   for (const a of expected) {
     assert.ok(registryActions.includes(a), `${a} should be in the registry`);

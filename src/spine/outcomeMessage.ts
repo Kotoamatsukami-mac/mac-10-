@@ -5,6 +5,7 @@
 // below; no provider logic; no second spine.
 
 import type { ResolveNowResult } from "../hooks/usePreviewPrediction";
+import type { ActionKind } from "./registry";
 import type { SpineOutcome } from "./runSpine";
 
 export type StripStatus =
@@ -18,6 +19,37 @@ export function shortLabel(label: string | null | undefined): string {
   const words = label.trim().split(/\s+/).filter(Boolean);
   if (words.length <= 3) return words.join(" ");
   return words.slice(0, 3).join(" ") + "…";
+}
+
+// Past-tense verb shown next to the target on a successful action.
+// Volume actions are special-cased in the caller because they format the
+// numeric argument inline.
+function okVerbFor(action: ActionKind | "unknown"): string {
+  switch (action) {
+    case "app.open":
+    case "folder.open":
+    case "service.open":
+    case "settings.open":
+      return "Opened";
+    case "app.quit":
+      return "Quit";
+    case "app.hide":
+      return "Hid";
+    case "app.focus":
+      return "Focused";
+    case "volume.mute":
+      return "Muted";
+    case "volume.unmute":
+      return "Unmuted";
+    case "volume.step_up":
+    case "volume.step_down":
+    case "volume.set":
+      // volume.set is special-cased; step_up/step_down fall through to a
+      // generic label in the rare case the caller doesn't override.
+      return "Set";
+    case "unknown":
+      return "Done";
+  }
 }
 
 export function statusFromResolveNow(
@@ -71,10 +103,12 @@ export function statusFromOutcome(outcome: SpineOutcome): StripStatus {
         outcome.parsed.prediction.display_label;
       const trimmed = shortLabel(label);
       console.assert(Boolean(trimmed), "ok outcome missing display label");
-      return {
-        kind: "ok",
-        msg: `Opened ${trimmed}`,
-      };
+      const verb = okVerbFor(outcome.parsed.action);
+      const msg =
+        outcome.parsed.action === "volume.set"
+          ? `Volume ${outcome.parsed.target_ref?.numeric_arg ?? trimmed}`
+          : `${verb} ${trimmed}`;
+      return { kind: "ok", msg };
     }
     // Map typed executor errors to precise user guidance
     const errorKind =
@@ -88,6 +122,12 @@ export function statusFromOutcome(outcome: SpineOutcome): StripStatus {
         return { kind: "blocked", msg: "Not allowed" };
       case "open_failed":
         return { kind: "hint", msg: "Couldn't open" };
+      case "app_not_running":
+        return { kind: "hint", msg: "Not running" };
+      case "app_not_found":
+        return { kind: "hint", msg: "Not found" };
+      case "audio_unavailable":
+        return { kind: "hint", msg: "Audio unavailable" };
       default:
         return { kind: "hint", msg: "Try again" };
     }
