@@ -41,6 +41,21 @@ function guidanceStatus(guidance: GuidanceState): StripStatus {
 
 function governorStatus(outcome: SpineOutcome): StripStatus | null {
   const g = outcome.governor;
+  if (!g) {
+    // Compatibility for older unit fixtures that focus only on validation,
+    // approval, or executor mapping. Real runSpine outcomes always include a
+    // governor decision.
+    const v = outcome.validation;
+    if (v.kind === "invalid") return guidanceStatus(v.guidance);
+    if (outcome.approval?.kind === "needs_approval") {
+      return { kind: "hint", msg: "Confirm" };
+    }
+    if (outcome.approval?.kind === "rejected") {
+      return { kind: "blocked", msg: "Blocked" };
+    }
+    return null;
+  }
+
   if (g.status === "allow") return null;
 
   // Prefer precise, short recovery copy where the governor can provide it.
