@@ -92,11 +92,16 @@ function decisionFor(prediction: PreviewPrediction, snapshot: NativeEnvironmentS
   return governCommand(parsed, validation, snapshot);
 }
 
-test("governor blocks app.open when resolver hands it a live-runtime-only app", () => {
+test("governor blocks app.open when resolver hands it a live-runtime-sourced launch path", () => {
   const decision = decisionFor(
     predictionFor(
       "app",
-      { id: "running:com.apple.Safari", label: "Safari", bundle_id: "com.apple.Safari" },
+      {
+        id: "running:com.apple.Safari",
+        label: "Safari",
+        bundle_id: "com.apple.Safari",
+        path: "/Applications/Safari.app",
+      },
       { source: "live_runtime_state" },
     ),
     snapshotWithRunning(["com.apple.Safari"]),
