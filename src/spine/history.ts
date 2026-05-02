@@ -1,10 +1,10 @@
-// Phase 4 — History
+// Phase 4/5 — History
 //
 // One in-memory append-only log of every spine attempt, including those
 // rejected before execution. This is the audit trail the contract requires
 // at the trust layer.
 //
-// Phase 4 Slice 1 scope: in-memory only. Records are lost on app/window reload
+// Phase 4/5 scope: in-memory only. Records are lost on app/window reload
 // or process restart. Persistence and inspection UI belong to Phase 5+.
 
 import type { ParsedCommand } from "./parser";
@@ -12,6 +12,7 @@ import type { ValidationStatus } from "./validator";
 import type { RiskAssessment } from "./risk";
 import type { ApprovalDecision } from "./approve";
 import type { ExecutionOutcome } from "./executor";
+import type { GovernorDecision } from "./governor";
 
 export interface HistoryRecord {
   id: string;
@@ -20,6 +21,7 @@ export interface HistoryRecord {
   action: ParsedCommand["action"];
   target_label: string | null;
   validation: ValidationStatus;
+  governor: GovernorDecision | null;
   risk: RiskAssessment | null;
   approval: ApprovalDecision | null;
   execution: ExecutionOutcome | null;
