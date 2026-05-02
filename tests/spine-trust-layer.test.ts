@@ -328,8 +328,20 @@ test("risk + approval: volume actions auto-approve (clamped + reversible)", () =
   }
 });
 
-test("risk + approval: app verbs auto-approve (reversible)", () => {
-  for (const action of ["app.quit", "app.hide", "app.focus"] as const) {
+test("risk + approval: app.quit is attention (may interrupt unsaved work)", () => {
+  const decision = approve(
+    assessRisk({
+      raw_input: "quit safari",
+      action: "app.quit",
+      target_ref: null,
+      prediction: predictionFor("app", null),
+    }),
+  );
+  assert.equal(decision.kind, "needs_approval", "app.quit should require approval");
+});
+
+test("risk + approval: app.hide and app.focus auto-approve (safe)", () => {
+  for (const action of ["app.hide", "app.focus"] as const) {
     const decision = approve(
       assessRisk({
         raw_input: "x",

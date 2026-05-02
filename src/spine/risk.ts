@@ -23,8 +23,9 @@ export function assessRisk(cmd: ParsedCommand): RiskAssessment {
       };
     case "app.quit":
       return {
-        level: "safe",
-        reason: "asks a running app to terminate; reversible by relaunching",
+        level: "attention",
+        reason:
+          "terminates a running app; may interrupt unsaved work",
       };
     case "app.hide":
       return {

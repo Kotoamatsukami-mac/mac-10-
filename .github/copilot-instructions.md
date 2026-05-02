@@ -2,7 +2,7 @@
 
 ## Identity
 
-Macten is a compact local-first macOS command strip.
+Macten is a compact local-first macOS command strip. macOS-first — Windows is not a current target.
 
 Tagline, never reworded:
 
@@ -29,6 +29,7 @@ Governance priority:
 4. `docs/CHECKPOINT.md`
 5. `docs/DECISIONS.md`
 6. `docs/LESSONS.md`
+7. `docs/SECURITY_MODEL.md`
 
 If a proposed change contradicts governance, stop and say so. Do not silently override it.
 
@@ -38,13 +39,19 @@ THE MAC IS THE DICTIONARY
 THE BAR IS THE INTERPRETER
 THE COMMAND SPINE IS THE TRUST LAYER
 
+## Variable lexicon rule
+
+The lexicon is variable. Do not implement commands by matching fixed target words.
+Target names are data, not code. The parser parses grammar. The resolver reads the index.
+The executor runs typed actions. No target word gets special product logic.
+
 ## Command Spine — fixed, do not rename
 
-There are two related paths. Do not merge or confuse them.
+Two paths. Do not merge or confuse them.
 
 Preview path, advisory only:
 
-NativeEnvironmentSnapshot → NativeEnvironmentIndex → resolvePreview → PreviewPrediction → ghost completion
+classifyIntent → NativeEnvironmentSnapshot → NativeEnvironmentIndex → resolvePreview → PreviewPrediction → ghost completion
 
 Submit path, execution capable:
 
@@ -52,129 +59,85 @@ resolveNow(currentInput) → parser → validator → risk → approve → execu
 
 No provider, shortcut, UI helper, or smart path may bypass the submit spine.
 
-Current TypeScript spine files live in `src/spine/`:
+Spine files in `src/spine/`: parser.ts, registry.ts, validator.ts, risk.ts, approve.ts, executor.ts, history.ts, runSpine.ts
 
-- `parser.ts`
-- `registry.ts`
-- `validator.ts`
-- `risk.ts`
-- `approve.ts`
-- `executor.ts`
-- `history.ts`
-- `runSpine.ts`
+Phrase grammar in `src/resolver/phraseGrammar.ts`
 
 Do not add stages, reorder stages, rename stages, or create a second spine.
 
 ## Current phase
 
-Current phase: Phase 4 Slice 2 — outcome feedback in strip.
+Current phase: Phase 4 Slice 3 — phrase grammar + app verbs + volume.
 
-Already reachable through Enter:
+12 executable actions:
 
-- `app.open`
-- `folder.open`
-- `service.open`
-- `settings.open`
+| Action             | Rust command             | Risk      |
+|--------------------|--------------------------|-----------|
+| `app.open`         | executor_open_path       | safe      |
+| `app.quit`         | executor_quit_app        | attention |
+| `app.hide`         | executor_hide_app        | safe      |
+| `app.focus`        | executor_focus_app       | safe      |
+| `folder.open`      | executor_open_path       | safe      |
+| `service.open`     | executor_open_url        | safe      |
+| `settings.open`    | executor_open_url        | safe      |
+| `volume.set`       | executor_set_volume      | safe      |
+| `volume.mute`      | executor_set_mute        | safe      |
+| `volume.unmute`    | executor_set_mute        | safe      |
+| `volume.step_up`   | executor_step_volume     | safe      |
+| `volume.step_down` | executor_step_volume     | safe      |
 
-Registered but intentionally inert:
+## Risk classification
 
-- `volume.set` — placeholder only, `executable=false`, no native command yet.
-
-Phase 4 Slice 1 is single-step only. No planner, no multi-step orchestration, no provider model, no destructive operations.
-
-## Known failure mode — do not reproduce
-
-The prior build had the window hardlocked to screen centre. No Tauri config or shell override could move it. The drag region and input focus competed for the same event layer.
-
-Rules to prevent this:
-- Set window position explicitly to x: 400, y: 200 in tauri.conf.json at creation
-- Provide both -webkit-app-region: drag CSS zone AND a Tauri startDragging() fallback handle
-- Drag region must never overlap the input or buttons
-- Test drag before any other feature is considered working
-
-## Window rules
-
-- Tauri 2, macOS-first, macOSPrivateApi: true
-- width 800, height 76, transparent, undecorated, non-resizable
-- alwaysOnTop defaults false and is toggled only by the pin button through `set_pinned`
-- Strip must always be draggable. Pinning never disables drag.
-- Input stays clickable and typeable at all times.
-- No expanded dashboard. Inline panels only.
-
-## UI failure rule
-
-Every backend failure maps to one of six guidance states only:
-
-- needs_more
-- choose_one
-- permission_needed
-- approval_needed
-- unsupported_yet
-- blocked
-
-Forbidden user-facing strings: Error, Failed, stack traces, raw enum codes.
-
-## Build phases — implement current phase only
-
-Phase 1 — Draggable strip. Complete.
-Phase 2 — Native Environment Index. Complete.
-Phase 3 — Preview interpretation and ghost completion UI. Complete.
-Phase 4 — Safe local execution spine + outcome feedback. Current.
-Phase 5 — Approval UI and stronger history/undo. Future.
-Phase 6 — Provider interpretation only after local spine is proven. Future.
+- `app.quit` is **attention** — may interrupt unsaved work
+- All other current actions are **safe**
+- "Safe" means non-interruptive and unlikely to disturb user work
+- Until Phase 5 approval UI exists, attention-risk actions are blocked by the approval gate
 
 ## Execution boundary
 
-The Rust command surface is intentionally minimal.
+Rust commands:
 
-Currently allowed execution commands:
-
-- `executor_open_path`
-- `executor_open_url`
+- `executor_open_path` — path existence check, `/usr/bin/open`
+- `executor_open_url` — scheme allowlist, `/usr/bin/open`
+- `executor_quit_app` — NSRunningApplication.terminate (cooperative)
+- `executor_hide_app` — NSRunningApplication.hide
+- `executor_focus_app` — NSRunningApplication.activateWithOptions
+- `executor_set_volume` — CoreAudio HAL, clamped 0-100
+- `executor_set_mute` — CoreAudio HAL mute property
+- `executor_step_volume` — CoreAudio HAL relative delta
 
 Rules:
+- No AppleScript, no osascript, no free-form shell
+- No destructive filesystem operations
+- No new Rust command without explicit discussion
+- All errors are typed enums (ExecutorError, AppExecutorError, VolumeExecutorError)
 
-- `executor_open_path` requires the path to exist.
-- `executor_open_url` only allows `http`, `https`, `mailto`, `tel`, and `x-apple.systempreferences` schemes.
-- No AppleScript.
-- No osascript.
-- No free-form shell surface.
-- No destructive filesystem operations.
-- No new Rust execution command without explicit discussion.
+## Build phases
+
+Phase 1 — Draggable strip. Complete.
+Phase 2 — Native Environment Index. Complete.
+Phase 3 — Preview + ghost completion. Complete.
+Phase 4 — Execution spine + outcome feedback + phrase grammar + app/volume verbs. Current.
+Phase 4.5 — Live state hydration (running apps, frontmost app). Next.
+Phase 5 — Approval UI + durable history + undo. Future.
+Phase 6 — Provider interpretation (AI as typed parse generator). Future.
 
 ## Required checks
 
-After TypeScript changes:
-
-- `npx tsc --noEmit`
-
-After Rust changes:
-
-- `cd src-tauri && cargo check`
-
-Before committing a mixed TS/Rust change, run both.
-
-Use descriptive commit messages. Never commit with messages like `commit`, `update`, or `fix`.
+After changes: `npx tsc --noEmit`, `cd src-tauri && cargo check`, `npm test`
+CI runs on push/PR: TypeScript build + Rust check/clippy/fmt
 
 ## Hard refusals
 
-Refuse to add even if asked:
 - chat surface
-- expanded dashboard
-- developer console as product feature
-- theme system
+- dashboard / command palette / settings page
 - planner or multi-step agent
 - provider-first command path
-- features outside Phase 4 unless explicitly approved in `docs/BUILD_PHASES.md` and `docs/CHECKPOINT.md`
-- a second executor or second command spine
-- one-off command functions such as `openSafari()` or `openYoutube()`
-
-If a request crosses these lines: state out of scope per `PRODUCT_CONTRACT.md`, name the phase it belongs to, and stop.
+- features outside current phase without explicit approval
+- second executor or second spine
+- target-specific command functions (openSafari, openYoutube)
+- AppleScript / osascript / free-form shell
 
 ## Documentation rule
 
-Docs may not lag behind code.
-
-If a change advances phase reality or changes the executable surface, update `docs/BUILD_PHASES.md` and `docs/CHECKPOINT.md` in the same change set.
-
-If a bug reveals a reusable rule, add it to `docs/LESSONS.md`.
+Docs may not lag behind code. If a change advances the phase or changes the executable surface, update BUILD_PHASES.md, CHECKPOINT.md, and this file in the same commit.

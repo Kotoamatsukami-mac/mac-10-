@@ -2,10 +2,7 @@
 
 ## Current checkpoint
 
-Phase 4 Slice 2 — Outcome feedback in strip.
-
-Macten currently has the local single-step command spine wired end to end,
-with user-visible outcome feedback for every submit path:
+Phase 4 Slice 3 — Phrase grammar + app verbs + volume (12 executable actions).
 
 ```text
 Phase 1: Draggable transparent command strip
@@ -14,131 +11,104 @@ Phase 3 Slice 1: NativeEnvironmentIndex + resolvePreview()
 Phase 3 Slice 2: Ghost completion preview UI
 Phase 4 Slice 1: parser → validator → risk → approve → executor → history
 Phase 4 Slice 2: Outcome feedback — StripStatus overlay in strip
+Phase 4 Slice 3: Phrase grammar, app verbs (quit/hide/focus), volume control
 ```
 
 ## Locked architecture
 
 ```text
-NativeEnvironmentSnapshot
+raw input
+→ classifyIntent (phrase grammar: verb + target + optional arg)
+→ NativeEnvironmentSnapshot (loaded once)
 → buildNativeEnvironmentIndex(snapshot)
-→ NativeEnvironmentIndex
-→ resolvePreview(rawInput, index)
-→ PreviewPrediction
-→ parser
-→ validator
-→ risk
-→ approve
-→ executor
-→ history
+→ resolvePreview / resolveNow
+→ parser (maps intent × target_kind → action via registry)
+→ validator (checks required fields, maps failures to guidance)
+→ risk (safe / attention / blocked)
+→ approve (auto_approved / needs_approval / rejected)
+→ executor (typed Tauri commands only)
+→ history (in-memory, Phase 5 persists)
 ```
 
-Enter submits by resolving synchronously through `resolveNow()` and then calling `runSpine()`.
+## Current executable surface (12 actions)
 
-The debounced preview state is advisory only. Submit must not depend on stale debounced preview state.
+| Action             | Rust backend               | Risk      |
+|--------------------|----------------------------|-----------|
+| `app.open`         | executor_open_path         | safe      |
+| `app.quit`         | executor_quit_app (NSRunningApplication) | attention |
+| `app.hide`         | executor_hide_app (NSRunningApplication) | safe |
+| `app.focus`        | executor_focus_app (NSRunningApplication) | safe |
+| `folder.open`      | executor_open_path         | safe      |
+| `service.open`     | executor_open_url          | safe      |
+| `settings.open`    | executor_open_url          | safe      |
+| `volume.set`       | executor_set_volume (CoreAudio) | safe  |
+| `volume.mute`      | executor_set_mute (CoreAudio)  | safe  |
+| `volume.unmute`    | executor_set_mute (CoreAudio)  | safe  |
+| `volume.step_up`   | executor_step_volume (CoreAudio) | safe |
+| `volume.step_down` | executor_step_volume (CoreAudio) | safe |
 
-## Current executable surface
+## Phrase grammar
 
-Reachable through Enter:
+Supported verb families (src/resolver/phraseGrammar.ts):
 
-- `app.open`
-- `folder.open`
-- `service.open`
-- `settings.open`
+- **open**: open, launch, show, start, go to, bring up, pull up
+- **quit**: quit, close
+- **hide**: hide
+- **focus**: focus, switch to, activate
+- **volume_set**: set volume to N, volume N, volume to N
+- **volume_mute**: mute, silence
+- **volume_unmute**: unmute, unsilence
+- **volume_up**: volume up, turn volume up, louder
+- **volume_down**: volume down, turn volume down, quieter
 
-Registered but intentionally inert:
+Bare nouns default to "open" intent.
 
-- `volume.set` — placeholder only, `executable=false`, no bounded native volume command yet.
+## Risk classification
 
-## Outcome feedback (Phase 4 Slice 2)
+- `app.quit` is **attention** — may interrupt unsaved work
+- All other current actions are **safe** — bounded, reversible, non-interruptive
+- Until Phase 5 approval UI exists, attention-risk actions are blocked by the approval gate
 
-Outcome mapping lives in `src/spine/outcomeMessage.ts`.
-Status rendering lives in `src/App.tsx`.
+## Outcome feedback
 
-StripStatus kinds: idle, ok, hint, blocked.
+Mapping lives in `src/spine/outcomeMessage.ts`. Status kinds: idle, ok, hint, blocked.
 
-Mapping:
-- resolver unavailable → hint: "Index unavailable"
-- no prediction → hint: "Type more"
-- validation needs_more → hint: "Type more"
-- validation choose_one → hint: "Choose one"
-- validation permission_needed → hint: "Allow permission"
-- validation approval_needed → hint: "Confirm"
-- validation unsupported_yet → hint: "Not yet"
-- validation blocked → blocked: "Blocked"
-- approval needs_approval → hint: "Confirm"
-- approval rejected → blocked: "Blocked"
-- execution ok → ok: "Opened {label}"
-- execution failed → hint: "Try again"
-
-Rendering contract:
-- Status overlay uses .strip-status + .strip-status-{kind}
-- Ghost overlay uses .ghost-completion
-- Status wins: ghostVisible = status.kind === "idle" && showGhost
-- Keystroke clears status immediately
-- Auto-clear timers: ok=1200ms, hint=2500ms, blocked=3000ms
-- Strip height fixed at 76px. No second row. No expansion.
+Typed executor errors:
+- path_not_found → "Not found"
+- disallowed_scheme → "Not allowed"
+- app_not_running → "Not running"
+- audio_unavailable → "Audio unavailable"
+- open_failed → "Couldn't open"
 
 ## Execution boundary
 
-- TypeScript executor calls only explicit Tauri commands.
-- Rust exposes `executor_open_path` and `executor_open_url`.
-- `executor_open_path` requires the path to exist.
-- `executor_open_url` only allows `http`, `https`, `mailto`, `tel`, and `x-apple.systempreferences` schemes.
-- Rust delegates to `/usr/bin/open -- target`.
-- No AppleScript.
-- No osascript.
-- No free-form shell surface.
-- No destructive operations.
+- Open-style: `/usr/bin/open` with path existence / URL scheme checks
+- App verbs: `NSRunningApplication` (objc2-app-kit, native, no AppleScript)
+- Volume: CoreAudio HAL FFI (raw, no shell, clamped 0-100)
+- No AppleScript, no osascript, no free-form shell
+- No destructive filesystem operations
 
 ## Allowed next work
 
-- Phase 4 Slice 2.1: harden outcome feedback (no behavior change)
-- Phase 4 Slice 3: bounded volume.set (first safe state mutation)
-- Phase 4 Slice 4: typed Rust executor errors
-- Phase 4 Slice 5: inline disambiguation chooser
+- Phase 4.5: Live state hydration (running apps, frontmost app in snapshot)
+- Phase 5.1: Inline approval UI for attention-risk actions
+- Phase 5.2: Durable local history (JSONL or SQLite)
+- Phase 5.3: Command-specific undo (volume restore, app relaunch)
 
-## Forbidden until Phase 5+
+## Forbidden until explicitly approved
 
-- Provider AI interpretation.
-- Planner or plan-and-execute runtime.
-- Multi-step orchestration.
-- Destructive filesystem operations.
-- Approval UI beyond the typed pause point already in `approve.ts`.
-- Dropdowns or command-palette UI.
-- Native probes per keystroke.
-- One-off command functions such as `openSafari()` or `openYoutube()`.
-- A second command spine or alternate executor path.
+- Provider AI / LLM calls
+- Multi-step plan execution
+- Destructive filesystem operations
+- Dashboard / command palette / settings page
+- Second spine or alternate executor path
 
-## Manual verification checklist
+## Stop condition
 
-Preview:
-
-- `saf` shows a quiet Safari completion when Safari is indexed.
-- `open saf` resolves through the same generic path.
-- `youtube` resolves as a service entity.
-- `downloads` resolves as a folder entity when present in the snapshot.
-- `sound` resolves as a settings pane entity.
-- `whatsapp` / `whats app` resolves as an app entity if installed.
-- Ghost completion appears as faint text only, without underline.
-- Trailing space suppresses preview so Space acts as keep-typing / reject-ghost.
-- Ambiguous/no-match/empty completion stays silent.
-- Tab accepts the visible completion.
-- ArrowRight accepts only when the caret is at the end.
-
-Execution:
-
-- `youtube` + Enter opens YouTube through `service.open`.
-- `downloads` + Enter opens Downloads through `folder.open` when resolved.
-- `sound` + Enter opens the Sound settings pane through `settings.open`.
-- `safari` + Enter opens Safari through `app.open` when indexed.
-- Rejected or invalid commands are recorded in history and do not execute.
-- Drag handles, input focus, pin button, and Cmd+Shift+Space still work.
-
-## Stop condition before Phase 5
-
-Do not start provider interpretation, planner work, destructive commands, or approval UI until Phase 4 Slice 1 execution feels stable and both checks pass locally:
+Do not start Phase 5 until all 12 actions are runtime-verified and both checks pass:
 
 ```bash
 npx tsc --noEmit
 cd src-tauri && cargo check
+npm test
 ```
