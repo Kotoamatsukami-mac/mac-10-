@@ -53,7 +53,7 @@ export default function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const statusTimerRef = useRef<number | null>(null);
 
-  const { prediction, resolveNow } = usePreviewPrediction(value);
+  const { prediction, snapshot, resolveNow } = usePreviewPrediction(value);
   const showGhost = shouldShowGhost(prediction);
   const ghostVisible = status.kind === "idle" && showGhost;
   const completion = ghostVisible && prediction ? prediction.completion : "";
@@ -151,7 +151,7 @@ export default function App() {
 
     if (resolved.kind !== "resolved" || !resolved.prediction) return;
 
-    const outcome = await runSpine(resolved.prediction);
+    const outcome = await runSpine(resolved.prediction, snapshot);
     const next = statusFromOutcome(outcome);
     if (outcome.execution?.kind === "ok") {
       setValue("");
