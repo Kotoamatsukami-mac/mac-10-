@@ -1,4 +1,4 @@
-# Action Surface Contract
+# Action Contract Surface
 
 ## Status
 
@@ -9,17 +9,20 @@ Labels used here:
 - **Verified** means the current repository implements it.
 - **Principle** means an engineering rule applied to this repo.
 - **Future** means intended direction, not current behavior.
-- **Forbidden** means an architectural drift path that must not be introduced.
+- **Known limitation** means a real current gap.
+- **Do not introduce** means an architectural drift path.
 
-## Principle — action surface is a contract
+## Principle — actions are command contracts
 
 Macten actions are not casual features.
 
 An action exists only when it has a command contract, validation stance, governance stance, executor stance, undo policy, documentation, and tests.
 
-## Verified — current action surface
+The preferred conceptual name is **Command Contract**. The current file name remains `ACTION_SURFACE.md` because this document also freezes the public action boundary.
 
-The current action surface is exactly 12 actions:
+## Verified — current command contract surface
+
+The current command contract surface is exactly 12 actions:
 
 ```text
 app.open
@@ -42,12 +45,12 @@ Owner file:
 src/spine/registry.ts
 ```
 
-## Verified — action table
+## Verified — contract table
 
-| Action | Target | Required field | Current risk | Approval posture | Undo posture | Executor stance |
+| Action | Target | Required field | Current risk | Current approval posture | Undo posture | Executor stance |
 | --- | --- | --- | --- | --- | --- | --- |
 | `app.open` | app | path | safe | auto | partially reversible | `executor_open_path` |
-| `app.quit` | app | bundle_id | attention | gated | not reversible | `executor_quit_app` |
+| `app.quit` | app | bundle_id | attention | gated; inline Y/N UI not complete | not reversible | `executor_quit_app` |
 | `app.hide` | app | bundle_id | safe | auto | partially reversible | `executor_hide_app` |
 | `app.focus` | app | bundle_id | safe | auto | partially reversible | `executor_focus_app` |
 | `folder.open` | folder / volume | path | safe | auto | partially reversible | `executor_open_path` |
@@ -58,6 +61,12 @@ src/spine/registry.ts
 | `volume.unmute` | system_audio | none | safe | auto | reversible with pre-state | `executor_set_mute(false)` |
 | `volume.step_up` | system_audio | none | safe | auto | reversible with pre-state | `executor_step_volume(+6)` |
 | `volume.step_down` | system_audio | none | safe | auto | reversible with pre-state | `executor_step_volume(-6)` |
+
+## Known limitation — approval is gated but not interactive yet
+
+`app.quit` currently reaches a governor/approval gate. The inline Y/N strip interaction is Phase 5 work.
+
+Until that UI exists, docs must not imply that `app.quit` completes after a user-facing approval flow.
 
 ## Verified — current executor boundary
 
@@ -104,7 +113,7 @@ A new action must define all of the following before it is considered real:
 - tests
 - docs update
 
-## Future — richer command contracts
+## Future — fuller Command Contract Registry
 
 Future command contracts may move more metadata into a single command-contract registry.
 
@@ -126,7 +135,7 @@ Target shape:
 
 This is a future consolidation target, not the current file shape.
 
-## Forbidden — action creep
+## Do not introduce — action creep
 
 Do not add:
 

@@ -9,7 +9,8 @@ Labels used here:
 - **Verified** means the current repository implements it.
 - **Principle** means an engineering rule applied to this repo.
 - **Future** means intended direction, not current behavior.
-- **Forbidden** means an architectural drift path that must not be introduced.
+- **Known limitation** means a real current gap.
+- **Do not introduce** means an architectural drift path.
 
 ## Principle — confidence is not trust
 
@@ -24,6 +25,12 @@ Command Contract Binding
 ```
 
 Resolver confidence is an input signal. It is not an authorization signal.
+
+## Principle — policy is separate from enforcement
+
+The governor is the local policy decision point. The executor is the native enforcement bridge.
+
+Policy decides whether an action may proceed. The executor performs only the already-governed native action.
 
 ## Verified — current trust layers
 
@@ -42,7 +49,7 @@ Current trust owner files:
 
 | Layer | Owner file | Role |
 | --- | --- | --- |
-| Command surface | `src/spine/registry.ts` | Defines accepted ActionKinds and required fields |
+| Command contract surface | `src/spine/registry.ts` | Defines accepted ActionKinds and required fields |
 | Structural validation | `src/spine/validator.ts` | Rejects invalid shape, missing fields, ambiguity, weak confidence |
 | Contextual governance | `src/spine/governor.ts` | Uses parsed command, validation result, and cached native snapshot |
 | Risk classification | `src/spine/risk.ts` | Classifies danger level |
@@ -70,7 +77,7 @@ It currently checks:
 
 The validator is necessary but not sufficient.
 
-It must not be treated as contextual trust. It checks the command shape. It does not own runtime wisdom.
+It must not be treated as contextual trust. It checks command shape. It does not own runtime wisdom.
 
 ## Verified — contextual governance
 
@@ -92,11 +99,11 @@ The governor attaches:
 - undo policy
 - recovery guidance
 
-## Verified — approval posture
+## Known limitation — approval is policy-only right now
 
-`app.quit` is attention-risk and currently gates instead of auto-running.
+`app.quit` is attention-risk and currently reaches a gate instead of auto-running.
 
-Inline approval UI is not complete yet.
+Inline approval UI is not complete yet. Until that UI exists, Macten has approval policy metadata and gate outcomes, not a complete user approval interaction.
 
 ## Future — approval interaction
 
@@ -169,7 +176,7 @@ Durable history must distinguish:
 - undo offered
 - undo executed
 
-## Forbidden — false trust
+## Do not introduce — false trust
 
 Do not document or implement any layer as trusted merely because it is confident, convenient, or visually convincing.
 

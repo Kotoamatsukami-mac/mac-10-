@@ -9,13 +9,33 @@ Labels used here:
 - **Verified** means the current repository implements it.
 - **Principle** means an engineering rule applied to this repo.
 - **Future** means intended direction, not current behavior.
-- **Forbidden** means an architectural drift path that must not be introduced.
+- **Known limitation** means a real current gap.
+- **Do not introduce** means an architectural drift path.
 
 ## Principle — preview and submit are different systems
 
 Preview may suggest. Submit may act.
 
 A prediction is not authority. A command is trusted only after structural validation and contextual governance.
+
+## Principle — Macten is compiler-shaped
+
+The submit path should be understood as a compiler-shaped command runtime:
+
+```text
+User Sentence
+→ Phrase Grammar
+→ Native Symbol Binding
+→ Intent / Target Semantic Analysis
+→ Command Contract Binding
+→ Capability Validation
+→ Contextual Policy Governance
+→ Execution Plan
+→ Native Execution
+→ Diagnostics + Event History
+```
+
+This is an applied engineering model, not a claim that Macten currently implements a full compiler.
 
 ## Verified — current submit path
 
@@ -41,7 +61,7 @@ Owner files:
 | Native index | `src/resolver/nativeEnvironmentIndex.ts` | Searchable projection of native snapshot |
 | Preview resolver | `src/resolver/previewResolver.ts` | Advisory prediction from input and index |
 | Parser | `src/spine/parser.ts` | Bind prediction to ActionKind through registry |
-| Registry | `src/spine/registry.ts` | Current action surface and required fields |
+| Registry | `src/spine/registry.ts` | Current command contract surface and required fields |
 | Validator | `src/spine/validator.ts` | Structural and capability-floor validation |
 | Governor | `src/spine/governor.ts` | Contextual allow, gate, or block decision |
 | Risk | `src/spine/risk.ts` | Danger classification |
@@ -85,20 +105,26 @@ A mature command contract should define:
 The current contract is distributed across several files:
 
 ```text
-registry.ts       → action surface + required fields
+registry.ts       → command contract surface + required fields
 risk.ts           → risk posture
 approve.ts        → approval posture
 undoPolicy.ts     → reversibility posture
 executor.ts       → native executor binding
 ```
 
-## Future — fuller contract registry
+## Future — fuller Command Contract Registry
 
 A future version may consolidate more contract metadata into `registry.ts` or a related command-contract module.
 
 That future work must not hide policy decisions inside UI code, parser code, or executor code.
 
-## Forbidden — spine drift
+## Known limitation — approval interaction
+
+`app.quit` can currently reach a gate, but inline Y/N approval UI is not complete yet.
+
+Docs must describe this as gated policy, not as a completed approval interaction.
+
+## Do not introduce — spine drift
 
 Do not introduce:
 

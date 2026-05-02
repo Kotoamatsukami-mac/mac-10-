@@ -80,15 +80,6 @@ function block(
   return d;
 }
 
-function gate(
-  cmd: ParsedCommand,
-  guidance: GuidanceState,
-  reason: string,
-  recovery: string | null,
-): GovernorDecision {
-  return baseDecision(cmd, "gate", guidance, reason, recovery);
-}
-
 function allow(cmd: ParsedCommand): GovernorDecision {
   const risk = assessRisk(cmd);
   const approval = approve(risk);

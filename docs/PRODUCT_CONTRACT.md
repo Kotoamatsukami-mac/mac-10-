@@ -23,6 +23,23 @@ THE LEXICON IS THE COMMAND DICTIONARY
 THE STRIP IS ONLY THE PROJECTION
 THE COMMAND SPINE IS THE AUTHORITY
 
+## Documentation contract
+
+Docs are law, not lore.
+
+Documentation is not a second product surface. It must not invent capability, implementation status, phase completion, or future architecture. It must define the repository as it exists, the principles it must preserve, the gaps it has not closed, and the drift paths it must reject.
+
+A documentation claim is valid only when it does at least one of the following:
+
+- describes verified current repo behavior
+- states a durable engineering principle
+- marks a known limitation
+- defines future work explicitly
+- forbids architectural drift
+- names owner files or verification checks
+
+If a claim cannot point to current code, a durable principle, a known limitation, a future marker, or a forbidden-drift rule, it is product lore and should be removed.
+
 ## Runtime architecture
 
 The detailed architecture is documented in `docs/RUNTIME_ARCHITECTURE.md`.
