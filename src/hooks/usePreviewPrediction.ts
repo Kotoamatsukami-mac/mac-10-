@@ -1,19 +1,25 @@
-// Phase 3 Slice 2 — Preview prediction hook
+// Phase 3/5 — Preview prediction hook
 //
-// Loads the NativeEnvironmentSnapshot ONCE on mount, builds the index in
-// memory, and exposes a debounced PreviewPrediction for the current input.
+// Loads the NativeEnvironmentSnapshot on mount, builds the preview index in
+// memory, and also exposes the latest snapshot so submit-time governance can
+// judge commands against Mac context instead of trusting PreviewPrediction
+// alone.
 //
 // Behaviour:
 //  - while typing: prediction is cleared immediately (no ghost shown)
 //  - trailing whitespace suppresses preview so Space acts as "keep typing"
-//  - after ~300ms of no typing: resolvePreview runs against the cached index
+//  - after ~100ms of no typing: resolvePreview runs against the cached index
 //  - if the index has not yet loaded, prediction stays null silently
 //
-// No native probes per keystroke. No invoke beyond the single snapshot fetch
-// on mount.
+// No native probes per keystroke. Snapshot refresh cadence belongs to a later
+// runtime hydration slice; the submit path still receives the freshest cached
+// snapshot this hook owns.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadNativeEnvironment } from "../types/nativeEnvironment";
+import {
+  loadNativeEnvironment,
+  type NativeEnvironmentSnapshot,
+} from "../types/nativeEnvironment";
 import {
   buildNativeEnvironmentIndex,
   type NativeEnvironmentIndex,
@@ -35,19 +41,22 @@ export type ResolveNowResult =
 
 export interface PreviewPredictionHandle {
   prediction: PreviewPrediction | null;
+  snapshot: NativeEnvironmentSnapshot | null;
   resolveNow: (input: string) => ResolveNowResult;
 }
 
 export function usePreviewPrediction(input: string): PreviewPredictionHandle {
   const [prediction, setPrediction] = useState<PreviewPrediction | null>(null);
+  const [snapshot, setSnapshot] = useState<NativeEnvironmentSnapshot | null>(null);
   const indexRef = useRef<NativeEnvironmentIndex | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     loadNativeEnvironment()
-      .then((snapshot) => {
+      .then((nextSnapshot) => {
         if (cancelled) return;
-        indexRef.current = buildNativeEnvironmentIndex(snapshot);
+        indexRef.current = buildNativeEnvironmentIndex(nextSnapshot);
+        setSnapshot(nextSnapshot);
       })
       .catch((err) => {
         console.error("native environment index unavailable", err);
@@ -87,5 +96,5 @@ export function usePreviewPrediction(input: string): PreviewPredictionHandle {
     };
   }, []);
 
-  return { prediction, resolveNow };
+  return { prediction, snapshot, resolveNow };
 }
