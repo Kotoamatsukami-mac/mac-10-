@@ -2,15 +2,37 @@
 
 **COMMAND YOUR MAC IN ONE SENTENCE.**
 
-A transparent macOS command strip that compresses natural language into safe, governed native actions. Built with Tauri 2 + React + TypeScript. macOS-first — Windows is not a current target.
+Macten is a local-first macOS command runtime projected through a thin command strip. It resolves one sentence against the Mac's native environment, binds it to a known command contract, governs it, then dispatches one typed native action when allowed.
 
-## What it does
+Built with Tauri 2, Rust, React, and TypeScript. macOS-first. Windows is not a current target.
 
-Type a sentence. Macten resolves it against your Mac's real environment — installed apps, folders, settings panes, services — and executes it through a validated spine. No AI needed for the deterministic 80%.
+## What it is
 
-```
+Macten is:
+
+- a compact native command strip
+- a local command runtime
+- a trust-governed action spine
+- a typed bridge to native Mac actions
+- a memory-only preview surface while typing
+
+## What it is not
+
+Macten is not:
+
+- chat
+- a terminal clone
+- a generic AI agent
+- a dashboard
+- a workflow-builder UI
+- a shell-command passthrough
+- a provider-first automation tool
+
+## Current examples
+
+```text
 safari            → opens Safari
-quit spotify      → terminates Spotify (cooperative)
+quit spotify      → gates before terminating Spotify
 hide slack        → hides Slack windows
 focus chrome      → brings Chrome to the front
 downloads         → opens ~/Downloads
@@ -24,66 +46,90 @@ gpt               → opens ChatGPT (alias)
 gh                → opens GitHub (alias)
 ```
 
-## Architecture
+## Architecture summary
 
+```text
+Native Environment Capture
+→ Trust-Weighted Native Lexicon
+→ Phrase Grammar
+→ Native Symbol Binding
+→ Intent / Target Semantic Analysis
+→ Command Contract Binding
+→ Capability Validation
+→ Contextual Policy Governance
+→ Approval + Execution Plan
+→ Native Execution
+→ Diagnostics + Event History + Undo Policy
+→ Strip Projection
 ```
-Input
-→ classifyIntent (phrase grammar: verb + target + optional arg)
-→ NativeEnvironmentSnapshot (scanned once on launch)
-→ NativeEnvironmentIndex (in-memory, searchable)
-→ resolvePreview (debounced ghost completion)
-→ resolveNow (synchronous on Enter)
-→ parser → validator → risk → approve → executor → history
+
+The strip is projection. The command spine is authority.
+
+## Current submit spine
+
+```text
+resolveNow(submittedInput)
+→ parseCommand(prediction)
+→ validateCommand(parsed)
+→ governCommand(parsed, validation, snapshot)
+→ executeCommand(parsed) when allowed
+→ recordAttempt(...)
+→ statusFromOutcome(outcome)
 ```
 
-Every command flows through the same spine. No shortcuts, no one-off hacks. The parser parses grammar. The resolver reads the index. The executor runs typed actions.
+A prediction is not authority. A command is not attempted until it passes structural validation and contextual governance.
 
-## Current command surface
+## Core docs
 
-| Action           | What it does                          | Risk      |
-|------------------|---------------------------------------|-----------|
-| `app.open`       | Opens an installed application        | safe      |
-| `app.quit`       | Terminates a running app              | attention |
-| `app.hide`       | Hides an app's windows                | safe      |
-| `app.focus`      | Brings a running app to the front     | safe      |
-| `folder.open`    | Opens a folder in Finder              | safe      |
-| `service.open`   | Opens a URL in default browser        | safe      |
-| `settings.open`  | Opens a System Settings pane          | safe      |
-| `volume.set`     | Sets system volume (0-100)            | safe      |
-| `volume.mute`    | Mutes system audio                    | safe      |
-| `volume.unmute`  | Unmutes system audio                  | safe      |
-| `volume.step_up` | Steps volume up                       | safe      |
-| `volume.step_down`| Steps volume down                    | safe      |
+| Doc | Purpose |
+| --- | --- |
+| `docs/PRODUCT_CONTRACT.md` | Product boundary and doctrine |
+| `docs/RUNTIME_ARCHITECTURE.md` | Runtime architecture and performance invariants |
+| `docs/COMMAND_SPINE.md` | Exact submit path and owner files |
+| `docs/TRUST_MODEL.md` | Validation, governance, approval, undo, and history model |
+| `docs/ACTION_SURFACE.md` | Current 12-action command surface |
+| `docs/BUILD_PHASES.md` | Phase map and implementation status |
+
+## Current action surface
+
+The current surface is exactly 12 actions:
+
+| Action | What it does | Risk |
+| --- | --- | --- |
+| `app.open` | Opens an installed application | safe |
+| `app.quit` | Terminates a running app | attention |
+| `app.hide` | Hides an app's windows | safe |
+| `app.focus` | Brings a running app to the front | safe |
+| `folder.open` | Opens a folder in Finder | safe |
+| `service.open` | Opens a URL in default browser | safe |
+| `settings.open` | Opens a System Settings pane | safe |
+| `volume.set` | Sets system volume from 0 to 100 | safe |
+| `volume.mute` | Mutes system audio | safe |
+| `volume.unmute` | Unmutes system audio | safe |
+| `volume.step_up` | Steps volume up | safe |
+| `volume.step_down` | Steps volume down | safe |
+
+No new action exists unless it enters the command contract layer, validation, governance, executor stance, undo policy, tests, and docs.
 
 ## Execution boundary
 
-- Rust executor uses `/usr/bin/open` for paths and URLs
-- App verbs use `NSRunningApplication` (native, no AppleScript)
-- Volume uses CoreAudio HAL (raw FFI, no shell)
-- Path must exist for `executor_open_path`
-- URL scheme must be on allowlist for `executor_open_url`
-- No AppleScript, no osascript, no free-form shell
-- No destructive filesystem operations
+Verified native bridge stance:
 
-## Status feedback
+- open-style path/URL actions use typed Tauri commands
+- app verbs use `NSRunningApplication`
+- volume uses CoreAudio HAL
+- app/folder path actions require a path
+- service/settings URL actions require a URL
+- app runtime verbs require a bundle ID
+- volume set requires a numeric argument
 
-The strip shows outcome feedback with dark rainbow accents:
+No free-form shell command is part of the current execution boundary.
 
-- **Green** — success: "Opened Safari", "Quit Spotify", "Volume 50%"
-- **Violet** — guidance: "Keep typing", "Be more specific", "Not running"
-- **Coral** — blocked: "Not allowed"
+## Performance invariant
 
-Status clears on keystroke or after timed auto-clear.
+Preview must remain memory-only.
 
-## Keyboard
-
-| Key             | Action                                    |
-|-----------------|-------------------------------------------|
-| Enter           | Submit command                            |
-| Tab             | Accept ghost completion                   |
-| ArrowRight      | Accept ghost completion (at end of input) |
-| Space           | Keep typing (does not accept ghost)       |
-| Cmd+Shift+Space | Focus strip from anywhere                 |
+No native scan, filesystem crawl, permission probe, provider call, icon load, or full index rebuild may occur in the per-keystroke preview path.
 
 ## Dev
 
@@ -96,19 +142,32 @@ npm run tauri dev
 
 ```bash
 npx tsc --noEmit
+npm test
 cd src-tauri && cargo check
 cd src-tauri && cargo clippy -- -D warnings
-npm test
 ```
 
-## Phase roadmap
+## Current phase status
 
-- [x] Phase 1 — Draggable transparent strip
-- [x] Phase 2 — Native Environment Index
-- [x] Phase 3 — Preview + ghost completion
-- [x] Phase 4 Slice 1 — Execution spine (4 open-style actions)
-- [x] Phase 4 Slice 2 — Outcome feedback UI
-- [x] Phase 4 Slice 3 — Phrase grammar + app verbs + volume (12 actions)
-- [ ] Phase 4.5 — Live state hydration (running apps, frontmost app)
-- [ ] Phase 5 — Approval UI + durable history + undo
-- [ ] Phase 6 — Provider interpretation (AI as typed parse generator)
+Implemented:
+
+- draggable transparent strip
+- Native Environment Index
+- preview + ghost completion
+- outcome feedback UI
+- phrase grammar
+- 12-action command surface
+- live runtime app/frontmost hydration
+- contextual governor v1
+- undo policy table
+- in-memory attempt history
+
+Not complete yet:
+
+- inline approval UI
+- durable history ledger
+- pre-state capture
+- actual undo execution
+- provider interpretation
+- plugin system
+- scheduled deep refresh
