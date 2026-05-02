@@ -26,6 +26,26 @@ function shouldShowGhost(p: PreviewPrediction | null): boolean {
   }
 }
 
+// When the typed input alias-matches an entity completely (no remaining
+// characters to suggest as ghost text) but the prediction is still resolved
+// and executable, surface the resolved label as a right-aligned affordance.
+// This eliminates the dead-zone where typing 'settings' resolves correctly
+// but the strip looked idle. Pure visual; Enter behaviour unchanged.
+function resolvedAffordance(
+  p: PreviewPrediction | null,
+  typed: string,
+): string | null {
+  if (!p || !p.target_ref) return null;
+  if (p.completion) return null;
+  if (p.confidence_tier !== "exact" && p.confidence_tier !== "prefix") {
+    return null;
+  }
+  const label = p.target_ref.label;
+  // Skip when label is identical to what the user typed — nothing to add.
+  if (label.trim().toLowerCase() === typed.trim().toLowerCase()) return null;
+  return label;
+}
+
 export default function App() {
   const [pinned, setPinned] = useState(false);
   const [value, setValue] = useState("");
@@ -37,6 +57,10 @@ export default function App() {
   const showGhost = shouldShowGhost(prediction);
   const ghostVisible = status.kind === "idle" && showGhost;
   const completion = ghostVisible && prediction ? prediction.completion : "";
+  const affordance =
+    status.kind === "idle" && !showGhost
+      ? resolvedAffordance(prediction, value)
+      : null;
 
   const clearStatusTimer = () => {
     if (statusTimerRef.current !== null) {
@@ -168,6 +192,7 @@ export default function App() {
   // - Strip height fixed at 76px. No second row. No expansion.
   return (
     <div className="strip">
+      <span className="strip-sheen" aria-hidden="true" />
       <div
         className="drag-handle drag-handle-left"
         onMouseDown={startDrag}
@@ -191,6 +216,11 @@ export default function App() {
             <div className="input-ghost" aria-hidden="true">
               <span className="ghost-typed">{value}</span>
               <span className="ghost-completion">{prediction.completion}</span>
+            </div>
+          ) : affordance ? (
+            <div className="input-affordance" aria-hidden="true">
+              <span className="affordance-arrow">↩</span>
+              <span className="affordance-label">{affordance}</span>
             </div>
           ) : null}
           <input

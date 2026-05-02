@@ -18,17 +18,14 @@
   --accent-ok: #5eead4;
   --accent-hint: #c4b5fd;
   --accent-blocked: #fda4af;
-  --accent-focus: rgba(167, 139, 250, 0.5);
+  --accent-focus: rgba(167, 139, 250, 0.55);
   --accent-pin-active: #a5b4fc;
 
-  /* ── Surface — obsidian glass ────────────────────────────────────
-     Deeper midnight than vanilla rgba(12,12,14). Saturation lifted so
-     the wallpaper underneath bleeds through with character, not as a
-     muddy grey wash. */
+  /* ── Surface — obsidian glass ──────────────────────────────────── */
   --strip-bg: rgba(8, 8, 12, 0.62);
   --strip-bg-deep: rgba(4, 4, 8, 0.78);
   --strip-rim: rgba(255, 255, 255, 0.085);
-  --strip-rim-top: rgba(255, 255, 255, 0.16);
+  --strip-rim-top: rgba(255, 255, 255, 0.18);
   --strip-rim-bottom: rgba(0, 0, 0, 0.55);
 
   /* ── Input field ─────────────────────────────────────────────── */
@@ -61,7 +58,8 @@ body,
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Strip — the main container
+   Strip — obsidian glass surface
+   Three stacked layers: rim ribbon (animated), inner glass body, content.
    ═══════════════════════════════════════════════════════════════════════ */
 
 .strip {
@@ -71,174 +69,150 @@ body,
   display: flex;
   align-items: stretch;
   border-radius: 22px;
-  overflow: hidden;
+  overflow: visible; /* outer rim ribbon needs to extend past the body */
   isolation: isolate;
+  /* The outer rim ribbon sits 1px outside .strip-body via padding. */
+  padding: 1px;
+  background: transparent;
+}
 
-  /* Layered surface:
-     1. Vertical sheen — top is brighter than bottom, faintly catching light.
-     2. Obsidian wash — the actual dark base.
-     The blend reads as deep gloss rather than a flat translucent slab. */
+/* The animated evil-rainbow rim. This is the gradient ring that breathes
+   life into the strip. Sits BEHIND the inner glass body via z-index, then
+   the body covers all but 1px of it — leaving a hairline halo around the
+   whole shape. Because the gradient rotates through @property, the rim
+   appears to slowly flow with light. */
+.strip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  z-index: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--rim-angle, 0deg),
+    rgba(94, 234, 212, 0.0) 0deg,
+    rgba(94, 234, 212, 0.55) 35deg,
+    rgba(167, 139, 250, 0.65) 100deg,
+    rgba(244, 114, 182, 0.55) 175deg,
+    rgba(251, 191, 36, 0.4) 240deg,
+    rgba(94, 234, 212, 0.55) 320deg,
+    rgba(94, 234, 212, 0.0) 360deg
+  );
+  /* Idle state: ribbon is dim — barely-there glow. Active states crank up. */
+  opacity: 0.35;
+  filter: blur(0.5px) saturate(120%);
+  animation: rim-drift 14s linear infinite;
+  transition: opacity 280ms ease, filter 280ms ease;
+}
+
+/* Inner glass body — covers everything inside the 1px rim ribbon halo.
+   This is the real visible surface. */
+.strip::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 21px;
+  z-index: 1;
+  pointer-events: none;
+
   background:
+    /* Specular sheen — vertical light catching the upper third. */
     linear-gradient(
       180deg,
-      rgba(28, 28, 38, 0.55) 0%,
-      rgba(10, 10, 14, 0.55) 38%,
-      rgba(4, 4, 8, 0.7) 100%
+      rgba(48, 48, 64, 0.55) 0%,
+      rgba(18, 18, 26, 0.45) 28%,
+      rgba(6, 6, 10, 0.6) 70%,
+      rgba(2, 2, 4, 0.78) 100%
+    ),
+    /* Off-centre radial — soft light source upper-left. */
+    radial-gradient(
+      ellipse 60% 90% at 30% 0%,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.02) 40%,
+      transparent 70%
     ),
     var(--strip-bg-deep);
 
-  -webkit-backdrop-filter: blur(56px) saturate(180%) brightness(0.92);
-  backdrop-filter: blur(56px) saturate(180%) brightness(0.92);
-
-  /* Outer rim: thin top highlight, darker bottom shadow line. */
-  border: 1px solid var(--strip-rim);
-  border-top-color: var(--strip-rim-top);
-  border-bottom-color: var(--strip-rim-bottom);
+  -webkit-backdrop-filter: blur(56px) saturate(190%) brightness(0.9);
+  backdrop-filter: blur(56px) saturate(190%) brightness(0.9);
 
   box-shadow:
     /* Outer drop — soft, far, deep. */
     0 28px 64px -16px rgba(0, 0, 0, 0.78),
     0 12px 24px -8px rgba(0, 0, 0, 0.5),
-    /* Inner top sheen — single pixel of light catching the rim. */
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    /* Inner top sheen — the polished glass seam. */
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
     /* Inner bottom — deepens the underside. */
-    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
-    /* Inner side darkening — gives the strip a barrel shape. */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    /* Side darkening — gives the strip a barrel curvature. */
     inset 1px 0 1px rgba(0, 0, 0, 0.3),
     inset -1px 0 1px rgba(0, 0, 0, 0.3);
 }
 
-/* Top-edge specular highlight — a thin lit seam along the upper rim.
-   This is what makes the surface read as polished glass instead of paint. */
-.strip::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 28px;
-  right: 28px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.08) 16%,
-    rgba(255, 255, 255, 0.22) 50%,
-    rgba(255, 255, 255, 0.08) 84%,
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 10;
-}
+/* ── Rim ribbon animation ─────────────────────────────────────────── */
 
-/* Inner radial glow — places a soft light source behind the input area.
-   Off-centre to feel naturalistic, not symmetrical. Very low alpha. */
-.strip::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse 60% 100% at 50% 0%,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.015) 35%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   Evil-rainbow accent — bottom seam
-   Lives on .strip but only shows during focus or non-idle status.
-   Implemented as a separate pseudo-element-equivalent via a child? No —
-   we only have :before/:after on .strip. The accent rides the input
-   wrapper instead, so it sits exactly under the active text region.
-   ═══════════════════════════════════════════════════════════════════════ */
-
-.input-wrap {
-  flex: 1 1 auto;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  min-width: 0;
-  position: relative;
-}
-
-/* The rainbow ribbon. Sits as a 1px line under the input field, full width
-   of input-wrap, with a conic-gradient that slowly rotates. Restrained:
-   the gradient is mostly transparent, the colours are deep, the motion is
-   long-period. It only reaches visible alpha when an ancestor signals
-   activity via .strip:focus-within or .strip[data-active]. */
-.input-wrap::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 14px;
-  height: 1px;
-  border-radius: 1px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 280ms ease;
-  background: conic-gradient(
-    from var(--rainbow-angle, 0deg),
-    rgba(94, 234, 212, 0) 0deg,
-    rgba(94, 234, 212, 0.7) 40deg,
-    rgba(167, 139, 250, 0.7) 110deg,
-    rgba(244, 114, 182, 0.6) 180deg,
-    rgba(251, 191, 36, 0.55) 250deg,
-    rgba(94, 234, 212, 0) 340deg,
-    rgba(94, 234, 212, 0) 360deg
-  );
-  /* Mask to a horizontal ribbon — the conic gradient is sampled across
-     a wide spectrum but presented as a thin horizontal line. */
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    black 12%,
-    black 88%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    black 12%,
-    black 88%,
-    transparent 100%
-  );
-  filter: blur(0.4px);
-}
-
-@property --rainbow-angle {
+@property --rim-angle {
   syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
 }
 
-@keyframes rainbow-drift {
+@keyframes rim-drift {
   to {
-    --rainbow-angle: 360deg;
+    --rim-angle: 360deg;
   }
 }
 
-/* Show ribbon when the strip is focused OR when status is active.
-   .strip:has(.command-input:focus) — focus state.
-   .strip:has(.strip-status) — any status overlay rendered.
-   :has() is supported in all current Tauri WKWebView builds (Safari 15.4+). */
-.strip:has(.command-input:focus) .input-wrap::after,
-.strip:has(.strip-status) .input-wrap::after {
-  opacity: 0.85;
-  animation: rainbow-drift 6s linear infinite;
-}
-
-/* Status-keyed shimmer intensities — blocked is brighter, ok is softer. */
-.strip:has(.strip-status-blocked) .input-wrap::after {
-  opacity: 1;
-  animation-duration: 3.5s;
-}
-
-.strip:has(.strip-status-ok) .input-wrap::after {
+/* Active intensities: focus and status raise rim brightness + speed. */
+.strip:has(.command-input:focus)::before {
   opacity: 0.7;
   animation-duration: 8s;
+}
+
+.strip:has(.strip-status)::before {
+  opacity: 0.95;
+  animation-duration: 5s;
+  filter: blur(0.4px) saturate(140%);
+}
+
+.strip:has(.strip-status-blocked)::before {
+  opacity: 1;
+  animation-duration: 3.2s;
+}
+
+.strip:has(.strip-status-ok)::before {
+  opacity: 0.8;
+  animation-duration: 7s;
+}
+
+/* All children must sit above the two pseudo-element layers. */
+.strip > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Top-edge specular highlight
+   Thin lit seam along the upper rim — the "polished" cue.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.strip-sheen {
+  position: absolute;
+  top: 1px;
+  left: 28px;
+  right: 28px;
+  height: 1px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 14%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.08) 86%,
+    transparent 100%
+  );
+  border-radius: 1px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -255,16 +229,13 @@ body,
   -webkit-app-region: drag;
   app-region: drag;
   cursor: grab;
-  position: relative;
-  z-index: 2;
 }
 
 .drag-handle:active {
   cursor: grabbing;
 }
 
-/* Two-column three-dot grip — the macOS sidebar/menu-bar dot pattern.
-   Two columns of 3 dots each, 3px diameter, 4px row spacing. */
+/* Two-column three-dot grip — macOS sidebar/menu-bar dot grammar. */
 .grip {
   width: 8px;
   height: 14px;
@@ -281,7 +252,7 @@ body,
 
 .drag-handle:hover .grip {
   opacity: 0.95;
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 .drag-handle:active .grip {
@@ -298,11 +269,19 @@ body,
    Input area
    ═══════════════════════════════════════════════════════════════════════ */
 
+.input-wrap {
+  flex: 1 1 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  min-width: 0;
+}
+
 .input-stack {
   position: relative;
   width: 100%;
   height: 44px;
-  z-index: 2;
 }
 
 .command-input {
@@ -322,7 +301,6 @@ body,
   outline: none;
   user-select: text;
   -webkit-user-select: text;
-  /* Slightly inset under-shadow on the field — depth, not flatness. */
   box-shadow:
     inset 0 1px 0 rgba(0, 0, 0, 0.25),
     inset 0 -1px 0 rgba(255, 255, 255, 0.025);
@@ -336,7 +314,7 @@ body,
   border-color: var(--accent-focus);
   background: var(--input-focus-bg);
   box-shadow:
-    0 0 0 3px rgba(167, 139, 250, 0.1),
+    0 0 0 3px rgba(167, 139, 250, 0.12),
     inset 0 1px 0 rgba(0, 0, 0, 0.25),
     inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
@@ -380,12 +358,47 @@ body,
   color: var(--ghost-color);
   text-decoration: none;
   font-weight: 400;
-  font-style: normal;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Resolved-target affordance
+   When typed input alias-matches an entity exactly, surface the resolved
+   label as a right-aligned chip so the strip is never silent. Press Enter
+   to confirm. Pure visual; spine behaviour unchanged.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.input-affordance {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 44px;
+  padding: 0 18px;
+  font-size: 13px;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.42);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  gap: 8px;
+}
+
+.affordance-arrow {
+  font-size: 11px;
+  color: rgba(167, 139, 250, 0.7);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-shadow: 0 0 8px rgba(167, 139, 250, 0.3);
+}
+
+.affordance-label {
+  color: rgba(255, 255, 255, 0.58);
+  text-shadow: 0 0 12px rgba(167, 139, 250, 0.18);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
    Status overlay — vivid but disciplined
-   The text colour is the signal. The rainbow ribbon underneath is ambient.
    ═══════════════════════════════════════════════════════════════════════ */
 
 .strip-status {
@@ -398,22 +411,22 @@ body,
 .strip-status-ok {
   color: var(--accent-ok);
   text-shadow:
-    0 0 14px rgba(94, 234, 212, 0.45),
-    0 0 2px rgba(94, 234, 212, 0.6);
+    0 0 14px rgba(94, 234, 212, 0.5),
+    0 0 2px rgba(94, 234, 212, 0.7);
 }
 
 .strip-status-hint {
   color: var(--accent-hint);
   text-shadow:
-    0 0 14px rgba(196, 181, 253, 0.4),
-    0 0 2px rgba(196, 181, 253, 0.5);
+    0 0 14px rgba(196, 181, 253, 0.45),
+    0 0 2px rgba(196, 181, 253, 0.55);
 }
 
 .strip-status-blocked {
   color: var(--accent-blocked);
   text-shadow:
-    0 0 14px rgba(253, 164, 175, 0.4),
-    0 0 2px rgba(253, 164, 175, 0.55);
+    0 0 14px rgba(253, 164, 175, 0.45),
+    0 0 2px rgba(253, 164, 175, 0.6);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -435,8 +448,6 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  z-index: 2;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
@@ -459,11 +470,11 @@ body,
 }
 
 .pin-button.active {
-  background: rgba(165, 180, 252, 0.12);
+  background: rgba(165, 180, 252, 0.14);
   color: var(--accent-pin-active);
-  border-color: rgba(165, 180, 252, 0.28);
+  border-color: rgba(165, 180, 252, 0.3);
   box-shadow:
-    0 0 12px rgba(165, 180, 252, 0.22),
+    0 0 14px rgba(165, 180, 252, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
@@ -476,15 +487,13 @@ body,
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Reduced-motion preference: kill the rainbow drift, keep the colour cue.
+   Reduced-motion preference
    ═══════════════════════════════════════════════════════════════════════ */
 
 @media (prefers-reduced-motion: reduce) {
-  .strip:has(.command-input:focus) .input-wrap::after,
-  .strip:has(.strip-status) .input-wrap::after {
+  .strip::before {
     animation: none;
   }
-
   .grip,
   .pin-button,
   .command-input {
