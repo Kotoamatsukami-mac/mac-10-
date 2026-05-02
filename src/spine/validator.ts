@@ -21,6 +21,8 @@ export type ValidationStatus =
   | { kind: "valid" }
   | { kind: "invalid"; guidance: GuidanceState; reason: string };
 
+// Execution confidence floor — distinct from the ghost-display threshold
+// (0.28) in src/App.tsx.
 const CONTAINS_THRESHOLD = 0.5;
 
 function fieldValue(

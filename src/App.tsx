@@ -11,7 +11,9 @@ import {
   statusFromResolveNow,
 } from "./spine/outcomeMessage";
 
-const CONTAINS_THRESHOLD = 0.28;
+// Ghost-display confidence floor — distinct from the validator's execution
+// threshold (0.5) in src/spine/validator.ts.
+const GHOST_DISPLAY_THRESHOLD = 0.28;
 
 function shouldShowGhost(p: PreviewPrediction | null): boolean {
   if (!p || !p.completion) return false;
@@ -20,7 +22,7 @@ function shouldShowGhost(p: PreviewPrediction | null): boolean {
     case "prefix":
       return true;
     case "contains":
-      return p.confidence >= CONTAINS_THRESHOLD;
+      return p.confidence >= GHOST_DISPLAY_THRESHOLD;
     default:
       return false;
   }
@@ -227,9 +229,7 @@ export default function App() {
             ref={inputRef}
             className="command-input"
             type="text"
-            placeholder={
-              status.kind !== "idle" ? "" : "Command your Mac in one sentence"
-            }
+            placeholder=""
             value={value}
             onChange={(e) => {
               setValue(e.target.value);

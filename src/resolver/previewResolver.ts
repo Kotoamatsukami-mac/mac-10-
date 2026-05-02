@@ -74,7 +74,6 @@ export interface PreviewPrediction {
   display_label: string;
   confidence: number;
   confidence_tier: ConfidenceTier;
-  executable: false;
   source: PreviewSource;
   target_ref?: PreviewTargetRef;
 }
@@ -259,7 +258,6 @@ function emptyPrediction(
     display_label: display,
     confidence: 0,
     confidence_tier: "no_match",
-    executable: false,
     source: "grammar",
   };
 }
@@ -310,7 +308,6 @@ function systemAudioPrediction(
     display_label: clamped !== undefined ? `${label} ${clamped}` : label,
     confidence: 1,
     confidence_tier: "exact",
-    executable: false,
     source: "grammar",
     target_ref: targetRef,
   };
@@ -414,7 +411,6 @@ export function resolvePreview(
     display_label: displayLabel,
     confidence,
     confidence_tier: tier,
-    executable: false,
     source: top.entity.source,
     target_ref: targetRef,
   };
