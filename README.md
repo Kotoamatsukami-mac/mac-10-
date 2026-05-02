@@ -32,7 +32,7 @@ Macten is not:
 
 ```text
 safari            → opens Safari
-quit spotify      → gates before terminating Spotify
+quit spotify      → reaches governor approval gate; inline Y/N UI is not built yet
 hide slack        → hides Slack windows
 focus chrome      → brings Chrome to the front
 downloads         → opens ~/Downloads
@@ -79,6 +79,20 @@ resolveNow(submittedInput)
 
 A prediction is not authority. A command is not attempted until it passes structural validation and contextual governance.
 
+## Claim standard
+
+Repo docs use this distinction:
+
+| Label | Meaning |
+| --- | --- |
+| Verified | Current repository behavior checked against code |
+| Principle | Proven engineering rule applied to Macten |
+| Future | Intended direction, not implemented yet |
+| Known limitation | Real current gap |
+| Do not introduce | Architectural drift path |
+
+Do not document future work as current behavior.
+
 ## Core docs
 
 | Doc | Purpose |
@@ -97,7 +111,7 @@ The current surface is exactly 12 actions:
 | Action | What it does | Risk |
 | --- | --- | --- |
 | `app.open` | Opens an installed application | safe |
-| `app.quit` | Terminates a running app | attention |
+| `app.quit` | Terminates a running app after approval is implemented | attention |
 | `app.hide` | Hides an app's windows | safe |
 | `app.focus` | Brings a running app to the front | safe |
 | `folder.open` | Opens a folder in Finder | safe |
