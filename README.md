@@ -81,17 +81,19 @@ A prediction is not authority. A command is not attempted until it passes struct
 
 ## Claim standard
 
+Docs are law, not lore.
+
 Repo docs use this distinction:
 
 | Label | Meaning |
 | --- | --- |
 | Verified | Current repository behavior checked against code |
-| Principle | Proven engineering rule applied to Macten |
+| Principle | Durable engineering rule applied to Macten |
 | Future | Intended direction, not implemented yet |
 | Known limitation | Real current gap |
 | Do not introduce | Architectural drift path |
 
-Do not document future work as current behavior.
+Do not document future work as current behavior. Do not add architecture language that cannot point to current code, a durable principle, a known limitation, a future marker, or a forbidden-drift rule.
 
 ## Core docs
 
