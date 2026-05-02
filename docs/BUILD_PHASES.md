@@ -37,7 +37,7 @@ Deliverable: typed NativeEnvironmentSnapshot from Rust to frontend. ✅
 
 ### Slice 1 — Open-style execution spine (complete)
 
-- parser → validator → risk → approve → executor → history
+- parser → validator → executor → history
 - 4 open-style actions: app.open, folder.open, service.open, settings.open
 - Rust boundary: executor_open_path, executor_open_url
 - Typed ExecutorError enum (PathNotFound, DisallowedScheme, OpenFailed) ✅
@@ -59,7 +59,18 @@ Deliverable: typed NativeEnvironmentSnapshot from Rust to frontend. ✅
 - Rust: volume_executor.rs (CoreAudio HAL FFI — set/mute/step)
 - Typed errors: AppExecutorError, VolumeExecutorError
 - Risk: app.quit reclassified as attention (may interrupt unsaved work)
-- 22 unit tests covering registry/executor contract, validator guidance, risk+approval, outcome mapping ✅
+- Unit tests cover registry/executor contract, validator guidance, risk+approval, outcome mapping ✅
+
+### Slice 4 — Contextual governor + undo policy groundwork (complete)
+
+- Submit spine now runs parser → validator → governor → executor → history
+- validator.ts remains structural/capability-floor validation
+- governor.ts performs contextual policy judgement using parsed command, validation result, and cached NativeEnvironmentSnapshot
+- undoPolicy.ts declares reversibility policy for every ActionKind
+- history records governor decisions as part of the audit trail
+- outcomeMessage.ts surfaces governor guidance before executor results
+- App.tsx passes the cached NativeEnvironmentSnapshot into runSpine
+- Tests cover false-positive cases: live-runtime-only app.open, focus when app is not running, unsafe service URLs, malformed settings URLs, volume governance, and undo-policy coverage ✅
 
 ### Phase 4 hard rules
 
@@ -67,7 +78,9 @@ Deliverable: typed NativeEnvironmentSnapshot from Rust to frontend. ✅
 - No planner or multi-step agent
 - No destructive filesystem changes
 - No target-specific parser branches
-- New actions only through registry → validator → risk → approve → executor → history
+- Preview remains memory-only
+- App.tsx remains a strip projection and event bridge, not the product brain
+- New actions only through command contract → validator → governor → executor → history
 
 ## Phase 4.5 — Live runtime state hydration (complete)
 
@@ -77,12 +90,14 @@ Deliverable: typed NativeEnvironmentSnapshot from Rust to frontend. ✅
 - Intent-aware scoring: open prefers launchable, quit/hide/focus prefer running
 - No new actions added — surface remains exactly 12 actions
 - Validation contracts unchanged: app.open requires path, quit/hide/focus require bundle_id ✅
+- Submit-time governor now uses cached runtime context where available ✅
 
 ## Phase 5 — Approval UI + durable history + undo
 
-- 5.1: Inline approval for attention-risk actions (Y/N in strip, not modal)
+- 5.1: Inline approval for gated actions (Y/N in strip, not modal)
 - 5.2: Durable local history (JSONL or SQLite, append-only)
-- 5.3: Command-specific undo where possible (volume restore, app relaunch)
+- 5.3: Pre-state capture for undo-capable actions
+- 5.4: Command-specific undo where policy allows it (volume restore, focus restore, limited app/folder recovery)
 - Permanent delete is permanently blocked
 - Filesystem stays inside $HOME unless explicitly extended
 
