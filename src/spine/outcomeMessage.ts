@@ -1,10 +1,11 @@
-// Phase 4 Slice 2 — Outcome message mapping
+// Phase 4/5 — Outcome message mapping
 //
 // Pure mapping from resolveNow / SpineOutcome shapes to a minimal StripStatus
-// rendered in the existing input-stack overlay. No formatting beyond the rules
-// below; no provider logic; no second spine.
+// rendered in the existing input-stack overlay. No provider logic, no second
+// spine, no raw enum/user-hostile failure strings.
 
 import type { ResolveNowResult } from "../hooks/usePreviewPrediction";
+import type { GuidanceState } from "./validator";
 import type { ActionKind } from "./registry";
 import type { SpineOutcome } from "./runSpine";
 
@@ -19,6 +20,42 @@ export function shortLabel(label: string | null | undefined): string {
   const words = label.trim().split(/\s+/).filter(Boolean);
   if (words.length <= 3) return words.join(" ");
   return words.slice(0, 3).join(" ") + "…";
+}
+
+function guidanceStatus(guidance: GuidanceState): StripStatus {
+  switch (guidance) {
+    case "needs_more":
+      return { kind: "hint", msg: "Keep typing" };
+    case "choose_one":
+      return { kind: "hint", msg: "Be more specific" };
+    case "permission_needed":
+      return { kind: "hint", msg: "Needs permission" };
+    case "approval_needed":
+      return { kind: "hint", msg: "Needs confirm" };
+    case "unsupported_yet":
+      return { kind: "hint", msg: "Not available yet" };
+    case "blocked":
+      return { kind: "blocked", msg: "Not allowed" };
+  }
+}
+
+function governorStatus(outcome: SpineOutcome): StripStatus | null {
+  const g = outcome.governor;
+  if (g.status === "allow") return null;
+
+  // Prefer precise, short recovery copy where the governor can provide it.
+  // Keep it strip-safe: one line, no raw enum strings.
+  if (g.recovery) {
+    const msg = shortLabel(g.recovery);
+    return { kind: g.status === "block" ? "blocked" : "hint", msg };
+  }
+
+  if (g.guidance) return guidanceStatus(g.guidance);
+
+  return {
+    kind: g.status === "block" ? "blocked" : "hint",
+    msg: g.status === "block" ? "Not allowed" : "Confirm",
+  };
 }
 
 // Past-tense verb shown next to the target on a successful action.
@@ -67,34 +104,8 @@ export function statusFromResolveNow(
 }
 
 export function statusFromOutcome(outcome: SpineOutcome): StripStatus {
-  const v = outcome.validation;
-  if (v.kind === "invalid") {
-    switch (v.guidance) {
-      case "needs_more":
-        return { kind: "hint", msg: "Keep typing" };
-      case "choose_one":
-        return { kind: "hint", msg: "Be more specific" };
-      case "permission_needed":
-        return { kind: "hint", msg: "Needs permission" };
-      case "approval_needed":
-        return { kind: "hint", msg: "Needs confirm" };
-      case "unsupported_yet":
-        return { kind: "hint", msg: "Not available yet" };
-      case "blocked":
-        return { kind: "blocked", msg: "Not allowed" };
-    }
-  }
-
-  if (outcome.approval) {
-    switch (outcome.approval.kind) {
-      case "needs_approval":
-        return { kind: "hint", msg: "Confirm" };
-      case "rejected":
-        return { kind: "blocked", msg: "Blocked" };
-      case "auto_approved":
-        break;
-    }
-  }
+  const governed = governorStatus(outcome);
+  if (governed) return governed;
 
   if (outcome.execution) {
     if (outcome.execution.kind === "ok") {
