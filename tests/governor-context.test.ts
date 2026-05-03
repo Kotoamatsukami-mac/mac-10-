@@ -188,6 +188,30 @@ test("runSpine records unverifiable app.quit without executing", async () => {
   });
 });
 
+test("runSpine blocks live-runtime-sourced app.open without executing", async () => {
+  const outcome = await runSpine(
+    predictionFor(
+      "app",
+      {
+        id: "running:com.apple.Safari",
+        label: "Safari",
+        bundle_id: "com.apple.Safari",
+        path: "/Applications/Safari.app",
+      },
+      { source: "live_runtime_state" },
+    ),
+    snapshotWithRunning(["com.apple.Safari"]),
+  );
+
+  assert.deepEqual(outcome.validation, { kind: "valid" });
+  assert.equal(outcome.governor.status, "block");
+  assert.equal(outcome.governor.guidance, "needs_more");
+  assert.equal(outcome.execution, null);
+  assert.equal(outcome.record.governor?.status, "block");
+  assert.equal(outcome.record.execution, null);
+  assert.match(outcome.governor.reason, /launchable static app path/);
+});
+
 test("governor does not execute focus for the already-frontmost app", () => {
   const snapshot = snapshotWithRunning(["com.apple.Safari"]);
   snapshot.live_runtime_state.frontmost_app = {
