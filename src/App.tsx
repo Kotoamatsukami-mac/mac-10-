@@ -11,8 +11,6 @@ import {
   statusFromResolveNow,
 } from "./spine/outcomeMessage";
 
-// Ghost-display confidence floor — distinct from the validator's execution
-// threshold (0.5) in src/spine/validator.ts.
 const GHOST_DISPLAY_THRESHOLD = 0.28;
 
 function shouldShowGhost(p: PreviewPrediction | null): boolean {
@@ -28,11 +26,6 @@ function shouldShowGhost(p: PreviewPrediction | null): boolean {
   }
 }
 
-// When the typed input alias-matches an entity completely (no remaining
-// characters to suggest as ghost text) but the prediction still resolves to a
-// target, surface the resolved label as a right-aligned affordance.
-// This eliminates the dead-zone where typing 'settings' resolves correctly
-// but the strip looked idle. Pure visual; Enter behaviour unchanged.
 function resolvedAffordance(
   p: PreviewPrediction | null,
   typed: string,
@@ -43,13 +36,13 @@ function resolvedAffordance(
     return null;
   }
   const label = p.target_ref.label;
-  // Skip when label is identical to what the user typed — nothing to add.
   if (label.trim().toLowerCase() === typed.trim().toLowerCase()) return null;
   return label;
 }
 
 export default function App() {
   const [pinned, setPinned] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +56,7 @@ export default function App() {
     status.kind === "idle" && !showGhost
       ? resolvedAffordance(prediction, value)
       : null;
+  const showPrompt = status.kind === "idle" && !value;
 
   const clearStatusTimer = () => {
     if (statusTimerRef.current !== null) {
@@ -118,12 +112,7 @@ export default function App() {
 
   const startDrag = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    if (
-      e.target !== e.currentTarget &&
-      (e.target as HTMLElement).closest(".no-drag")
-    ) {
-      return;
-    }
+    if ((e.target as HTMLElement).closest(".no-drag")) return;
     getCurrentWindow()
       .startDragging()
       .catch(() => {});
@@ -162,6 +151,11 @@ export default function App() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape" && menuOpen) {
+      e.preventDefault();
+      setMenuOpen(false);
+      return;
+    }
     if (e.key === "Enter") {
       e.preventDefault();
       void submit();
@@ -185,84 +179,137 @@ export default function App() {
     }
   };
 
-  // Status rendering contract:
-  // - Status overlay uses .strip-status + .strip-status-{kind}
-  // - Ghost overlay uses .ghost-completion
-  // - Status wins: ghostVisible = status.kind === "idle" && showGhost
-  // - Keystroke clears status immediately
-  // - Timer auto-clears: ok=1200ms, hint=2500ms, blocked=3000ms
-  // - Strip height fixed at 76px. No second row. No expansion.
   return (
-    <div className="strip">
-      <span className="strip-sheen" aria-hidden="true" />
-      <div
-        className="drag-handle drag-handle-left"
-        onMouseDown={startDrag}
-        aria-label="drag"
-      >
-        <span className="grip" />
-      </div>
+    <main className="shell-stage" onMouseDown={startDrag}>
+      <section className="strip" aria-label="Macten command strip">
+        <span className="strip-sheen" aria-hidden="true" />
 
-      <div className="input-wrap no-drag">
-        <div className="input-stack">
-          {status.kind !== "idle" ? (
-            <div className="input-ghost" aria-hidden="true">
-              <span className="ghost-typed">{value}</span>
-              <span
-                className={`strip-status strip-status-${status.kind}`}
-              >
-                {status.msg}
-              </span>
-            </div>
-          ) : ghostVisible && prediction ? (
-            <div className="input-ghost" aria-hidden="true">
-              <span className="ghost-typed">{value}</span>
-              <span className="ghost-completion">{prediction.completion}</span>
-            </div>
-          ) : affordance ? (
-            <div className="input-affordance" aria-hidden="true">
-              <span className="affordance-arrow">↩</span>
-              <span className="affordance-label">{affordance}</span>
-            </div>
-          ) : null}
-          <input
-            ref={inputRef}
-            className="command-input"
-            type="text"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              if (status.kind !== "idle") {
-                clearStatusTimer();
-                setStatus({ kind: "idle" });
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            spellCheck={false}
-            autoCorrect="off"
-            autoCapitalize="off"
-          />
+        <div className="command-hub" aria-hidden="true">
+          <span className="command-symbol">cmd</span>
+          <span className="command-divider" />
         </div>
-      </div>
 
-      <button
-        type="button"
-        className={`pin-button no-drag ${pinned ? "active" : ""}`}
-        onClick={togglePin}
-        title={pinned ? "Unpin" : "Pin"}
-        aria-pressed={pinned}
-      >
-        <span className="pin-glyph">{pinned ? "●" : "○"}</span>
-      </button>
+        <div className="input-wrap no-drag">
+          <div className="input-stack">
+            {showPrompt ? (
+              <div className="empty-prompt" aria-hidden="true">
+                <span className="prompt-title">Ask your Mac</span>
+                <span className="prompt-hint">Try "open Safari"</span>
+              </div>
+            ) : status.kind !== "idle" ? (
+              <div className="input-ghost" aria-hidden="true">
+                <span className="ghost-typed">{value}</span>
+                <span className={`strip-status strip-status-${status.kind}`}>
+                  {status.msg}
+                </span>
+              </div>
+            ) : ghostVisible && prediction ? (
+              <div className="input-ghost" aria-hidden="true">
+                <span className="ghost-typed">{value}</span>
+                <span className="ghost-completion">{prediction.completion}</span>
+              </div>
+            ) : affordance ? (
+              <div className="input-affordance" aria-hidden="true">
+                <span className="affordance-arrow">Enter</span>
+                <span className="affordance-label">{affordance}</span>
+              </div>
+            ) : null}
+            <input
+              ref={inputRef}
+              className="command-input"
+              type="text"
+              value={value}
+              aria-label="Command"
+              onChange={(e) => {
+                setValue(e.target.value);
+                if (status.kind !== "idle") {
+                  clearStatusTimer();
+                  setStatus({ kind: "idle" });
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
+            />
+          </div>
+        </div>
 
-      <div
-        className="drag-handle drag-handle-right"
-        onMouseDown={startDrag}
-        aria-label="drag"
-      >
-        <span className="grip" />
-      </div>
-    </div>
+        <div className="toolbar no-drag">
+          <button
+            type="button"
+            className={`tool-button layer-button ${pinned ? "active" : ""}`}
+            onClick={togglePin}
+            title={pinned ? "Unpin from front" : "Keep in front"}
+            aria-pressed={pinned}
+          >
+            <span className="layer-glyph" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          </button>
+
+          <span className="toolbar-divider" aria-hidden="true" />
+
+          <button
+            type="button"
+            className={`tool-button settings-button ${menuOpen ? "active" : ""}`}
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-controls="settings-popover"
+            title="Settings"
+          >
+            <span className="gear-glyph" aria-hidden="true">gear</span>
+          </button>
+        </div>
+      </section>
+
+      {menuOpen ? (
+        <aside
+          id="settings-popover"
+          className="settings-popover no-drag"
+          aria-label="Macten settings summary"
+        >
+          <div className="popover-caret" aria-hidden="true" />
+          <div className="settings-row">
+            <span className="settings-icon accent-ring" aria-hidden="true" />
+            <span>
+              <strong>Accent</strong>
+              <em>Rainbow</em>
+            </span>
+          </div>
+          <div className="settings-row">
+            <span className="settings-icon stack-icon" aria-hidden="true" />
+            <span>
+              <strong>Load Style</strong>
+              <em>Liquid Glass</em>
+            </span>
+          </div>
+          <div className="settings-row">
+            <span className="settings-icon pin-icon" aria-hidden="true" />
+            <span>
+              <strong>Keep in Front</strong>
+              <em>{pinned ? "On" : "Off"}</em>
+            </span>
+          </div>
+          <div className="settings-row">
+            <span className="settings-icon lock-icon" aria-hidden="true" />
+            <span>
+              <strong>Permissions</strong>
+              <em>Accessibility, Automation</em>
+            </span>
+          </div>
+          <div className="settings-row">
+            <span className="settings-icon history-icon" aria-hidden="true" />
+            <span>
+              <strong>History</strong>
+              <em>Recent activity</em>
+            </span>
+          </div>
+        </aside>
+      ) : null}
+    </main>
   );
 }
