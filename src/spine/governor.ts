@@ -35,7 +35,10 @@ function hasSystemSettingsUrl(url: string | undefined): boolean {
   return Boolean(url && url.startsWith("x-apple.systempreferences:"));
 }
 
-function appIsRunning(snapshot: NativeEnvironmentSnapshot | null, bundleId: string | null | undefined): boolean | null {
+function appIsRunning(
+  snapshot: NativeEnvironmentSnapshot | null,
+  bundleId: string | null | undefined,
+): boolean | null {
   if (!bundleId || !snapshot) return null;
   const reading = snapshot.live_runtime_state.running_apps;
   if (reading.kind !== "available") return null;
@@ -53,17 +56,19 @@ function audioOutputKnown(snapshot: NativeEnvironmentSnapshot | null): boolean |
   return reading.data.output.length > 0;
 }
 
-// Distrust resolver confidence: a contains-tier match near the threshold
-// may be wrong. Gate it so the user must explicitly confirm (Phase 5 inline
-// approval) instead of auto-executing.
-const CONTAINS_SOFT_CEILING = 0.65;
+// Validator rejects contains-tier matches below 0.5. Governor gates the next
+// band instead of auto-executing it.
+const CONTAINS_GATE_CEILING = 0.65;
 
 function isWeakContainsMatch(cmd: ParsedCommand): boolean {
   const p = cmd.prediction;
-  return p.confidence_tier === "contains" && p.confidence < CONTAINS_SOFT_CEILING;
+  return p.confidence_tier === "contains" && p.confidence < CONTAINS_GATE_CEILING;
 }
 
-function appIsFrontmost(snapshot: NativeEnvironmentSnapshot | null, bundleId: string | null | undefined): boolean | null {
+function appIsFrontmost(
+  snapshot: NativeEnvironmentSnapshot | null,
+  bundleId: string | null | undefined,
+): boolean | null {
   if (!bundleId || !snapshot) return null;
   const reading = snapshot.live_runtime_state.frontmost_app;
   if (reading.kind !== "available" || !reading.data) return null;
@@ -128,16 +133,13 @@ export function governCommand(
     return block(cmd, validation.guidance, validation.reason, null);
   }
 
-  // Cross-cutting confidence distrust: a contains-tier match near the
-  // execution threshold may be a false positive. Gate it instead of
-  // auto-executing. The user sees "Be more specific" or similar guidance.
   if (isWeakContainsMatch(cmd)) {
     return baseDecision(
       cmd,
       "gate",
       "choose_one",
       "low-confidence contains match requires confirmation",
-      "Be more specific or press Enter again to confirm.",
+      "Be more specific.",
     );
   }
 
@@ -178,8 +180,6 @@ export function governCommand(
           `Try opening ${cmd.target_ref?.label ?? "the app"} first.`,
         );
       }
-      // If the app is already frontmost, allow the command but it will be a
-      // no-op. A future slice can surface "Already focused" guidance here.
       const frontmost = appIsFrontmost(snapshot, cmd.target_ref?.bundle_id);
       if (frontmost === true) {
         return baseDecision(
