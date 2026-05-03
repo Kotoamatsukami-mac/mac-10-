@@ -81,7 +81,7 @@ It must not be treated as contextual trust. It checks command shape. It does not
 
 ## Verified — contextual governance
 
-`governor.ts` owns contextual allow, gate, or block decisions.
+`governor.ts` owns contextual allow, gate, block, or already-satisfied decisions.
 
 It currently checks examples such as:
 
