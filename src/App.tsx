@@ -184,7 +184,7 @@ export default function App() {
 
         {/* Command mark */}
         <div className="command-hub" aria-hidden="true">
-          <span className="command-symbol">⌘</span>
+          <span className="command-symbol">cmd</span>
           <span className="command-divider" />
         </div>
 

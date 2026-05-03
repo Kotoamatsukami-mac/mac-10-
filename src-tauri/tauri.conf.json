@@ -15,8 +15,8 @@
       {
         "label": "main",
         "title": "Macten",
-        "width": 1160,
-        "height": 260,
+        "width": 900,
+        "height": 180,
         "resizable": false,
         "decorations": false,
         "transparent": true,
