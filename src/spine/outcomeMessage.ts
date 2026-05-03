@@ -113,7 +113,7 @@ export function statusFromResolveNow(
   // resolvePreview() returns null only when the normalized input is empty.
   // no_match still returns a prediction and flows through the spine validator.
   if (!result.prediction) {
-    return { kind: "hint", msg: "Type more" };
+    return { kind: "hint", msg: "Keep going" };
   }
   return null;
 }

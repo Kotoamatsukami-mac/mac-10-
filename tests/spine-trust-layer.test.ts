@@ -467,7 +467,7 @@ test("statusFromResolveNow: unavailable index becomes a hint", () => {
 
 test("statusFromResolveNow: empty input yields a hint, not silence", () => {
   const s = statusFromResolveNow({ kind: "resolved", prediction: null });
-  assert.deepEqual(s, { kind: "hint", msg: "Type more" });
+  assert.deepEqual(s, { kind: "hint", msg: "Keep going" });
 });
 
 test("shortLabel: ellipsizes long labels at 3 words", () => {
