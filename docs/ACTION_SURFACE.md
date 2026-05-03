@@ -52,7 +52,7 @@ src/spine/registry.ts
 | `app.open` | app | path | safe | auto | partially reversible | `executor_open_path` |
 | `app.quit` | app | bundle_id | attention | gated only with running evidence; inline Y/N UI not complete | not reversible | `executor_quit_app` |
 | `app.hide` | app | bundle_id | safe | auto | partially reversible | `executor_hide_app` |
-| `app.focus` | app | bundle_id | safe | auto unless already frontmost | partially reversible | `executor_focus_app` |
+| `app.focus` | app | bundle_id | safe | auto unless already satisfied | partially reversible | `executor_focus_app` |
 | `folder.open` | folder / volume | path | safe | auto | partially reversible | `executor_open_path` |
 | `service.open` | service | url | safe | auto | partially reversible | `executor_open_url` |
 | `settings.open` | settings_pane | url | safe | auto | partially reversible | `executor_open_url` |

@@ -14,7 +14,7 @@ import { assessRisk, type RiskAssessment } from "./risk";
 import { approve, type ApprovalDecision } from "./approve";
 import { undoPolicyFor, type UndoPolicy } from "./undoPolicy";
 
-export type GovernorStatus = "allow" | "gate" | "block";
+export type GovernorStatus = "allow" | "gate" | "block" | "satisfied";
 
 export interface GovernorDecision {
   status: GovernorStatus;
@@ -192,8 +192,8 @@ export function governCommand(
       if (frontmost === true) {
         return baseDecision(
           cmd,
-          "gate",
-          "unsupported_yet",
+          "satisfied",
+          null,
           "app.focus target is already frontmost",
           "Already focused.",
         );

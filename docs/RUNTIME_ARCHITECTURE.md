@@ -144,7 +144,7 @@ Prediction + cached NativeEnvironmentSnapshot
 → Strip Status Projection
 ```
 
-If `governor.status` is `gate` or `block`, execution does not run. The attempt is still recorded.
+If `governor.status` is `gate`, `block`, or `satisfied`, execution does not run. The attempt is still recorded.
 
 ## Command Contract Binding
 

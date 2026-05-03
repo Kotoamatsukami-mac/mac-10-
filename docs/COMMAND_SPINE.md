@@ -63,7 +63,7 @@ Owner files:
 | Parser | `src/spine/parser.ts` | Bind prediction to ActionKind through registry |
 | Registry | `src/spine/registry.ts` | Current command contract surface and required fields |
 | Validator | `src/spine/validator.ts` | Structural and capability-floor validation |
-| Governor | `src/spine/governor.ts` | Contextual allow, gate, or block decision |
+| Governor | `src/spine/governor.ts` | Contextual allow, gate, block, or satisfied decision |
 | Risk | `src/spine/risk.ts` | Danger classification |
 | Approval | `src/spine/approve.ts` | Risk-to-approval decision |
 | Undo policy | `src/spine/undoPolicy.ts` | Reversibility classification |
@@ -80,7 +80,7 @@ Native execution is attempted only after:
 3. `validateCommand(...)` returns valid.
 4. `governCommand(...)` returns `status: "allow"`.
 
-If the governor returns `gate` or `block`, native execution is not attempted and the attempt is still recorded.
+If the governor returns `gate`, `block`, or `satisfied`, native execution is not attempted and the attempt is still recorded.
 
 ## Principle — Command Contract Binding
 

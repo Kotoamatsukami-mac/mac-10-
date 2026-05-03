@@ -209,8 +209,8 @@ test("governor does not execute focus for the already-frontmost app", () => {
     snapshot,
   );
 
-  assert.equal(decision.status, "gate");
-  assert.equal(decision.guidance, "unsupported_yet");
+  assert.equal(decision.status, "satisfied");
+  assert.equal(decision.guidance, null);
   assert.match(decision.reason, /already frontmost/);
 });
 
@@ -236,10 +236,10 @@ test("runSpine records already-frontmost app.focus without executing", async () 
   );
 
   assert.deepEqual(outcome.validation, { kind: "valid" });
-  assert.equal(outcome.governor.status, "gate");
-  assert.equal(outcome.governor.guidance, "unsupported_yet");
+  assert.equal(outcome.governor.status, "satisfied");
+  assert.equal(outcome.governor.guidance, null);
   assert.equal(outcome.execution, null);
-  assert.equal(outcome.record.governor?.status, "gate");
+  assert.equal(outcome.record.governor?.status, "satisfied");
   assert.equal(outcome.record.execution, null);
   assert.deepEqual(statusFromOutcome(outcome), {
     kind: "hint",
