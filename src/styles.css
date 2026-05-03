@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════
    Macten — Void Glass Command Strip
-   Premium macOS micro-surface · abyssal dark · evil-neon accent · 2026
+   Premium macOS micro-surface · abyssal dark · evil-neon accent
    ═══════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -22,11 +22,7 @@
   --accent-pin-active: #99b8ff;
 
   /* ── Surface — void glass ──────────────────────────────────────── */
-  --strip-bg: rgba(4, 4, 8, 0.68);
   --strip-bg-deep: rgba(2, 2, 4, 0.84);
-  --strip-rim: rgba(255, 255, 255, 0.07);
-  --strip-rim-top: rgba(255, 255, 255, 0.14);
-  --strip-rim-bottom: rgba(0, 0, 0, 0.65);
 
   /* ── Input field ─────────────────────────────────────────────── */
   --input-bg: rgba(255, 255, 255, 0.018);
@@ -58,7 +54,7 @@ body,
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Strip — obsidian glass surface
+   Strip — void glass surface
    Three stacked layers: rim ribbon (animated), inner glass body, content.
    ═══════════════════════════════════════════════════════════════════════ */
 
@@ -500,6 +496,7 @@ body,
 @media (prefers-reduced-motion: reduce) {
   .strip::before {
     animation: none;
+    transition: none !important;
   }
   .grip,
   .pin-button,
