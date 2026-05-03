@@ -78,7 +78,6 @@ function predictionFor(
     display_label: target_ref?.label ?? "fixture",
     confidence: 1,
     confidence_tier: "exact",
-    executable: false,
     source: "static_inventory",
     target_kind,
     target_ref,

@@ -34,7 +34,9 @@ All other schemes are rejected at the Rust boundary.
 
 ## Execution boundary
 
-- Only two Tauri commands execute OS actions: `executor_open_path` and `executor_open_url`
+- Open-style targets (path, URL): `executor.rs` via `/usr/bin/open`
+- App verbs (quit, hide, focus): `app_executor.rs` via NSRunningApplication (objc2, no AppleScript)
+- Volume control (set, mute, step): `volume_executor.rs` via CoreAudio HAL FFI (no shell)
 - No AppleScript, no osascript, no free-form shell
 - No destructive filesystem operations
 - No file write, move, delete, or rename

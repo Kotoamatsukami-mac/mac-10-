@@ -53,6 +53,23 @@ function audioOutputKnown(snapshot: NativeEnvironmentSnapshot | null): boolean |
   return reading.data.output.length > 0;
 }
 
+// Distrust resolver confidence: a contains-tier match near the threshold
+// may be wrong. Gate it so the user must explicitly confirm (Phase 5 inline
+// approval) instead of auto-executing.
+const CONTAINS_SOFT_CEILING = 0.65;
+
+function isWeakContainsMatch(cmd: ParsedCommand): boolean {
+  const p = cmd.prediction;
+  return p.confidence_tier === "contains" && p.confidence < CONTAINS_SOFT_CEILING;
+}
+
+function appIsFrontmost(snapshot: NativeEnvironmentSnapshot | null, bundleId: string | null | undefined): boolean | null {
+  if (!bundleId || !snapshot) return null;
+  const reading = snapshot.live_runtime_state.frontmost_app;
+  if (reading.kind !== "available" || !reading.data) return null;
+  return reading.data.bundle_id === bundleId;
+}
+
 function baseDecision(
   cmd: ParsedCommand,
   status: GovernorStatus,
@@ -111,6 +128,19 @@ export function governCommand(
     return block(cmd, validation.guidance, validation.reason, null);
   }
 
+  // Cross-cutting confidence distrust: a contains-tier match near the
+  // execution threshold may be a false positive. Gate it instead of
+  // auto-executing. The user sees "Be more specific" or similar guidance.
+  if (isWeakContainsMatch(cmd)) {
+    return baseDecision(
+      cmd,
+      "gate",
+      "choose_one",
+      "low-confidence contains match requires confirmation",
+      "Be more specific or press Enter again to confirm.",
+    );
+  }
+
   switch (cmd.action) {
     case "app.open": {
       if (!appIsLaunchable(cmd)) {
@@ -125,17 +155,39 @@ export function governCommand(
     }
 
     case "app.quit":
-    case "app.hide":
-    case "app.focus": {
+    case "app.hide": {
       const running = appIsRunning(snapshot, cmd.target_ref?.bundle_id);
       if (running === false) {
         return block(
           cmd,
           "unsupported_yet",
           `${cmd.action} requires the app to be running`,
-          cmd.action === "app.focus"
-            ? `Try opening ${cmd.target_ref?.label ?? "the app"} first.`
-            : `${cmd.target_ref?.label ?? "That app"} is not running.`,
+          `${cmd.target_ref?.label ?? "That app"} is not running.`,
+        );
+      }
+      return allow(cmd);
+    }
+
+    case "app.focus": {
+      const running = appIsRunning(snapshot, cmd.target_ref?.bundle_id);
+      if (running === false) {
+        return block(
+          cmd,
+          "unsupported_yet",
+          "app.focus requires the app to be running",
+          `Try opening ${cmd.target_ref?.label ?? "the app"} first.`,
+        );
+      }
+      // If the app is already frontmost, allow the command but it will be a
+      // no-op. A future slice can surface "Already focused" guidance here.
+      const frontmost = appIsFrontmost(snapshot, cmd.target_ref?.bundle_id);
+      if (frontmost === true) {
+        return baseDecision(
+          cmd,
+          "allow",
+          null,
+          `${cmd.target_ref?.label ?? "app"} is already the frontmost app`,
+          null,
         );
       }
       return allow(cmd);
