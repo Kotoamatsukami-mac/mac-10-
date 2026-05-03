@@ -113,7 +113,6 @@ Typed executor errors:
 
 ## Allowed next work
 
-- Phase 4.5: Live state hydration (running apps, frontmost app in snapshot)
 - Phase 5.1: Inline approval UI for attention-risk actions
 - Phase 5.2: Durable local history (JSONL or SQLite)
 - Phase 5.3: Command-specific undo (volume restore, app relaunch)
