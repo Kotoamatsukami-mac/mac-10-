@@ -38,9 +38,7 @@ function resolvedAffordance(
   return label;
 }
 
-// Help is program chrome — handled before runSpine, never touches the spine.
 const HELP_TRIGGERS = ["help", "?", "commands"];
-
 function isHelpInput(raw: string): boolean {
   return HELP_TRIGGERS.includes(raw.trim().toLowerCase());
 }
@@ -50,6 +48,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [value, setValue] = useState("");
+  const [focused, setFocused] = useState(false);
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
   const inputRef = useRef<HTMLInputElement>(null);
   const statusTimerRef = useRef<number | null>(null);
@@ -105,7 +104,6 @@ export default function App() {
     }
   };
 
-  // Shell surface is the drag zone. No explicit handles.
   const startDrag = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest(".no-drag")) return;
@@ -127,7 +125,6 @@ export default function App() {
     const submittedInput = value.trim();
     if (!submittedInput) return;
 
-    // Help is program chrome — never enters the spine.
     if (isHelpInput(submittedInput)) {
       setHelpOpen(true);
       setValue("");
@@ -179,27 +176,29 @@ export default function App() {
 
   return (
     <main className="shell-stage" onMouseDown={startDrag}>
-      <section className="strip" aria-label="Macten command strip">
+      <section
+        className={`strip ${focused ? "is-focused" : ""}`}
+        aria-label="Macten command strip"
+      >
+        <span className="strip-rim" aria-hidden="true" />
         <span className="strip-sheen" aria-hidden="true" />
 
-        {/* Command mark */}
-        <div className="command-hub" aria-hidden="true">
-          <span className="command-symbol">cmd</span>
-          <span className="command-divider" />
+        {/* Command mark — small, refined, restrained */}
+        <div className="cmd-mark no-drag" aria-hidden="true">
+          <CmdGlyph />
         </div>
 
-        {/* Input field */}
+        {/* Input — single-element prompt, never inline-collides */}
         <div className="input-wrap no-drag">
           <div className="input-stack">
             {showPrompt ? (
               <div className="empty-prompt" aria-hidden="true">
                 <span className="prompt-title">Ask your Mac</span>
-                <span className="prompt-sep" aria-hidden="true">|</span>
-                <span className="prompt-hint">Try "open Safari"  ↩</span>
+                <span className="prompt-hint">Try "open Safari"</span>
               </div>
             ) : status.kind !== "idle" ? (
-              // Status is chip-aligned right — never collides with typed text
-              <div className="status-chip-wrap" aria-hidden="true">
+              <div className="status-line" aria-hidden="true">
+                <span className="status-typed">{value}</span>
                 <span className={`status-chip status-chip-${status.kind}`}>
                   {status.msg}
                 </span>
@@ -211,8 +210,11 @@ export default function App() {
               </div>
             ) : affordance ? (
               <div className="input-affordance" aria-hidden="true">
-                <span className="affordance-key">↩</span>
-                <span className="affordance-label">{affordance}</span>
+                <span className="affordance-typed">{value}</span>
+                <span className="affordance-trail">
+                  <span className="affordance-arrow">↩</span>
+                  <span className="affordance-label">{affordance}</span>
+                </span>
               </div>
             ) : null}
             <input
@@ -221,6 +223,8 @@ export default function App() {
               type="text"
               value={value}
               aria-label="Command"
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               onChange={(e) => {
                 setValue(e.target.value);
                 if (status.kind !== "idle") { clearStatusTimer(); setStatus({ kind: "idle" }); }
@@ -235,13 +239,13 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right toolbar */}
+        {/* Right toolbar — sculpted, larger, premium */}
         <div className="toolbar no-drag">
           <button
             type="button"
-            className={`tool-btn layer-btn ${pinned ? "active" : ""}`}
+            className={`tool-btn ${pinned ? "is-active" : ""}`}
             onClick={togglePin}
-            title={pinned ? "Unpin" : "Keep in front"}
+            title={pinned ? "Unpin from front" : "Keep in front"}
             aria-pressed={pinned}
           >
             <LayerIcon />
@@ -249,7 +253,7 @@ export default function App() {
 
           <button
             type="button"
-            className={`tool-btn gear-btn ${menuOpen ? "active" : ""}`}
+            className={`tool-btn ${menuOpen ? "is-active" : ""}`}
             onClick={() => { setMenuOpen((o) => !o); setHelpOpen(false); }}
             aria-expanded={menuOpen}
             aria-controls="settings-popover"
@@ -260,28 +264,25 @@ export default function App() {
         </div>
       </section>
 
-      {/* Settings popover — anchored to gear button */}
       {menuOpen && (
         <aside
           id="settings-popover"
           className="settings-popover no-drag"
           aria-label="Settings"
         >
-          <div className="pop-caret" aria-hidden="true" />
           <PopRow icon={<AccentIcon />} label="Accent" value="Rainbow" />
-          <PopRow icon={<LayerIcon size={20} />} label="Load Style" value="Liquid Glass" />
+          <PopRow icon={<LayerIcon size={18} />} label="Load Style" value="Liquid Glass" />
           <PopRow
             icon={<PinIcon />}
             label="Keep in Front"
             value={pinned ? "On" : "Off"}
             onClick={togglePin}
           />
-          <PopRow icon={<LockIcon />} label="Permissions" value="Accessibility, Automation" />
-          <PopRow icon={<ClockIcon />} label="History" value="Recent activity" />
+          <PopRow icon={<LockIcon />} label="Permissions" value="Microphone, Accessibility" />
+          <PopRow icon={<ClockIcon />} label="History" value="View recent activity" />
         </aside>
       )}
 
-      {/* Help panel — compact, attached below strip */}
       {helpOpen && (
         <aside className="help-panel no-drag" aria-label="Help">
           <div className="help-header">
@@ -301,34 +302,49 @@ export default function App() {
             <HelpRow cmd="volume 50" desc="Set system volume 0–100" />
             <HelpRow cmd="mute / unmute" desc="Toggle audio output" />
           </div>
-          <p className="help-footer">Press Esc or type a command to dismiss</p>
+          <p className="help-footer">Esc to dismiss · type any command to continue</p>
         </aside>
       )}
     </main>
   );
 }
 
-// ── Inline SVG icons — clean, scaled, no CSS pseudo-element hacks ──────────
+/* ── Inline icon set — clean SVG, no CSS hacks ──────────────────────────── */
 
-function LayerIcon({ size = 22 }: { size?: number }) {
+function CmdGlyph() {
   return (
-    <svg width={size} height={size} viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <path d="M11 2L2 7l9 5 9-5-9-5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M2 12l9 5 9-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
-      <path d="M2 17l9 5 9-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.38" />
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+      <path
+        d="M4 1.5a2 2 0 0 1 2 2v6a2 2 0 1 1-2-2h6a2 2 0 1 1-2 2v-6a2 2 0 1 1 2 2H4a2 2 0 1 1-2-2"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function LayerIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3 3 8l9 5 9-5-9-5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M3 13l9 5 9-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.62" />
+      <path d="M3 18l9 5 9-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.36" />
     </svg>
   );
 }
 
 function GearIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="3.2" stroke="currentColor" strokeWidth="1.7" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
       <path
-        d="M11 1.5v2M11 18.5v2M1.5 11h2M18.5 11h2M4.2 4.2l1.4 1.4M16.4 16.4l1.4 1.4M4.2 17.8l1.4-1.4M16.4 5.6l1.4-1.4"
+        d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.08a1.7 1.7 0 0 0-1.12-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.08a1.7 1.7 0 0 0 1.56-1.12 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.04a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.04a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.52 1.04Z"
         stroke="currentColor"
-        strokeWidth="1.7"
+        strokeWidth="1.4"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -336,11 +352,11 @@ function GearIcon() {
 
 function AccentIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <circle cx="10" cy="10" r="8.5" stroke="url(#rainbow)" strokeWidth="2.5" />
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="8.2" stroke="url(#rainbowGrad)" strokeWidth="2.4" />
       <defs>
-        <linearGradient id="rainbow" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#34ffc8" />
+        <linearGradient id="rainbowGrad" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#2effc4" />
           <stop offset="33%" stopColor="#7c6dff" />
           <stop offset="66%" stopColor="#ff3ea5" />
           <stop offset="100%" stopColor="#ffd456" />
@@ -352,26 +368,31 @@ function AccentIcon() {
 
 function PinIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M10 2l1.5 5.5H17l-4.5 3.3 1.7 5.5L10 13l-4.2 3.3 1.7-5.5L3 7.5h5.5L10 2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M11.5 2L13 6.5l4.5.5-3.5 3 1 4.5L11 12l-4 2.5 1-4.5-3.5-3 4.5-.5L10.5 2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function LockIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <rect x="4" y="9" width="12" height="9" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="4" y="9" width="12" height="9" rx="2.4" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
 function ClockIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M10 6v4.5l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10 6v4.5l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
