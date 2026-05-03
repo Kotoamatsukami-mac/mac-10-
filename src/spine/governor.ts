@@ -159,6 +159,14 @@ export function governCommand(
     case "app.quit":
     case "app.hide": {
       const running = appIsRunning(snapshot, cmd.target_ref?.bundle_id);
+      if (cmd.action === "app.quit" && running === null) {
+        return block(
+          cmd,
+          "unsupported_yet",
+          "app.quit cannot verify the app is running",
+          "Can't confirm running.",
+        );
+      }
       if (running === false) {
         return block(
           cmd,
@@ -184,10 +192,10 @@ export function governCommand(
       if (frontmost === true) {
         return baseDecision(
           cmd,
-          "allow",
-          null,
-          `${cmd.target_ref?.label ?? "app"} is already the frontmost app`,
-          null,
+          "gate",
+          "unsupported_yet",
+          "app.focus target is already frontmost",
+          "Already focused.",
         );
       }
       return allow(cmd);

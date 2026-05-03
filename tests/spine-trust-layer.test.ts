@@ -31,7 +31,7 @@ import {
   statusFromResolveNow,
 } from "../src/spine/outcomeMessage.ts";
 import type { PreviewPrediction } from "../src/resolver/previewResolver.ts";
-import type { SpineOutcome } from "../src/spine/runSpine.ts";
+import { runSpine, type SpineOutcome } from "../src/spine/runSpine.ts";
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -263,6 +263,23 @@ test("validator: low-confidence contains → needs_more", () => {
   const v = validateCommand(cmd);
   assert.equal(v.kind, "invalid");
   if (v.kind === "invalid") assert.equal(v.guidance, "needs_more");
+});
+
+test("runSpine: structurally valid weak contains match gates before executor", async () => {
+  const outcome = await runSpine(
+    predictionFor(
+      "app",
+      { id: "a", label: "A", path: "/Applications/A.app" },
+      { confidence_tier: "contains", confidence: 0.6 },
+    ),
+    null,
+  );
+
+  assert.deepEqual(outcome.validation, { kind: "valid" });
+  assert.equal(outcome.governor.status, "gate");
+  assert.equal(outcome.governor.guidance, "choose_one");
+  assert.equal(outcome.execution, null);
+  assert.equal(outcome.record.execution, null);
 });
 
 test("validator: exact + complete target_ref → valid", () => {

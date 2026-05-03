@@ -50,9 +50,9 @@ src/spine/registry.ts
 | Action | Target | Required field | Current risk | Current approval posture | Undo posture | Executor stance |
 | --- | --- | --- | --- | --- | --- | --- |
 | `app.open` | app | path | safe | auto | partially reversible | `executor_open_path` |
-| `app.quit` | app | bundle_id | attention | gated; inline Y/N UI not complete | not reversible | `executor_quit_app` |
+| `app.quit` | app | bundle_id | attention | gated only with running evidence; inline Y/N UI not complete | not reversible | `executor_quit_app` |
 | `app.hide` | app | bundle_id | safe | auto | partially reversible | `executor_hide_app` |
-| `app.focus` | app | bundle_id | safe | auto | partially reversible | `executor_focus_app` |
+| `app.focus` | app | bundle_id | safe | auto unless already frontmost | partially reversible | `executor_focus_app` |
 | `folder.open` | folder / volume | path | safe | auto | partially reversible | `executor_open_path` |
 | `service.open` | service | url | safe | auto | partially reversible | `executor_open_url` |
 | `settings.open` | settings_pane | url | safe | auto | partially reversible | `executor_open_url` |
@@ -64,7 +64,7 @@ src/spine/registry.ts
 
 ## Known limitation — approval is gated but not interactive yet
 
-`app.quit` currently reaches a governor/approval gate. The inline Y/N strip interaction is Phase 5 work.
+`app.quit` reaches a governor/approval gate only when running-app evidence is available. The inline Y/N strip interaction is Phase 5 work.
 
 Until that UI exists, docs must not imply that `app.quit` completes after a user-facing approval flow.
 

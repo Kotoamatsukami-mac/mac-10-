@@ -14,6 +14,8 @@ import { validateCommand } from "../src/spine/validator.ts";
 import { governCommand } from "../src/spine/governor.ts";
 import { COMMAND_REGISTRY, type ActionKind } from "../src/spine/registry.ts";
 import { allUndoPolicies, undoPolicyFor } from "../src/spine/undoPolicy.ts";
+import { runSpine } from "../src/spine/runSpine.ts";
+import { statusFromOutcome } from "../src/spine/outcomeMessage.ts";
 
 function snapshotWithRunning(bundleIds: string[]): NativeEnvironmentSnapshot {
   return {
@@ -140,6 +142,109 @@ test("governor gates app.quit with approval when runtime evidence supports it", 
   assert.equal(decision.guidance, "approval_needed");
   assert.equal(decision.approval.kind, "needs_approval");
   assert.equal(decision.undo_policy.undo_class, "not_reversible");
+});
+
+test("governor blocks app.quit when runtime state cannot prove the app is running", () => {
+  const snapshot = snapshotWithRunning(["com.apple.Safari"]);
+  snapshot.live_runtime_state.running_apps = { kind: "unavailable", reason: "fixture" };
+
+  const decision = decisionFor(
+    predictionFor(
+      "app",
+      { id: "running:com.apple.Safari", label: "Safari", bundle_id: "com.apple.Safari" },
+      { intent: "quit", action_kind: "quit_app", source: "live_runtime_state" },
+    ),
+    snapshot,
+  );
+
+  assert.equal(decision.status, "block");
+  assert.equal(decision.guidance, "unsupported_yet");
+  assert.equal(decision.approval.kind, "rejected");
+  assert.match(decision.reason, /cannot verify the app is running/);
+});
+
+test("runSpine records unverifiable app.quit without executing", async () => {
+  const snapshot = snapshotWithRunning(["com.apple.Safari"]);
+  snapshot.live_runtime_state.running_apps = { kind: "unavailable", reason: "fixture" };
+
+  const outcome = await runSpine(
+    predictionFor(
+      "app",
+      { id: "running:com.apple.Safari", label: "Safari", bundle_id: "com.apple.Safari" },
+      { intent: "quit", action_kind: "quit_app", source: "live_runtime_state" },
+    ),
+    snapshot,
+  );
+
+  assert.deepEqual(outcome.validation, { kind: "valid" });
+  assert.equal(outcome.governor.status, "block");
+  assert.equal(outcome.governor.approval.kind, "rejected");
+  assert.equal(outcome.execution, null);
+  assert.equal(outcome.record.governor?.status, "block");
+  assert.equal(outcome.record.execution, null);
+  assert.deepEqual(statusFromOutcome(outcome), {
+    kind: "blocked",
+    msg: "Can't confirm running.",
+  });
+});
+
+test("governor does not execute focus for the already-frontmost app", () => {
+  const snapshot = snapshotWithRunning(["com.apple.Safari"]);
+  snapshot.live_runtime_state.frontmost_app = {
+    kind: "available",
+    data: {
+      bundle_id: "com.apple.Safari",
+      display_name: "Safari",
+      pid: 100,
+      is_active: true,
+    },
+  };
+
+  const decision = decisionFor(
+    predictionFor(
+      "app",
+      { id: "running:com.apple.Safari", label: "Safari", bundle_id: "com.apple.Safari" },
+      { intent: "focus", action_kind: "focus_app", source: "live_runtime_state" },
+    ),
+    snapshot,
+  );
+
+  assert.equal(decision.status, "gate");
+  assert.equal(decision.guidance, "unsupported_yet");
+  assert.match(decision.reason, /already frontmost/);
+});
+
+test("runSpine records already-frontmost app.focus without executing", async () => {
+  const snapshot = snapshotWithRunning(["com.apple.Safari"]);
+  snapshot.live_runtime_state.frontmost_app = {
+    kind: "available",
+    data: {
+      bundle_id: "com.apple.Safari",
+      display_name: "Safari",
+      pid: 100,
+      is_active: true,
+    },
+  };
+
+  const outcome = await runSpine(
+    predictionFor(
+      "app",
+      { id: "running:com.apple.Safari", label: "Safari", bundle_id: "com.apple.Safari" },
+      { intent: "focus", action_kind: "focus_app", source: "live_runtime_state" },
+    ),
+    snapshot,
+  );
+
+  assert.deepEqual(outcome.validation, { kind: "valid" });
+  assert.equal(outcome.governor.status, "gate");
+  assert.equal(outcome.governor.guidance, "unsupported_yet");
+  assert.equal(outcome.execution, null);
+  assert.equal(outcome.record.governor?.status, "gate");
+  assert.equal(outcome.record.execution, null);
+  assert.deepEqual(statusFromOutcome(outcome), {
+    kind: "hint",
+    msg: "Already focused.",
+  });
 });
 
 test("governor blocks unsafe service URL schemes", () => {

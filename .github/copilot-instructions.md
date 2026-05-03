@@ -117,8 +117,8 @@ Rules:
 Phase 1 — Draggable strip. Complete.
 Phase 2 — Native Environment Index. Complete.
 Phase 3 — Preview + ghost completion. Complete.
-Phase 4 — Execution spine + outcome feedback + phrase grammar + app/volume verbs. Current.
-Phase 4.5 — Live state hydration (running apps, frontmost app). Next.
+Phase 4 — Execution spine + outcome feedback + phrase grammar + app/volume verbs. Complete.
+Phase 4.5 — Live state hydration (running apps, frontmost app). Current.
 Phase 5 — Approval UI + durable history + undo. Future.
 Phase 6 — Provider interpretation (AI as typed parse generator). Future.
 
