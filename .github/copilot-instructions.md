@@ -16,7 +16,7 @@ Every feature must answer one question: does this help the user command their Ma
 
 Before touching code:
 
-1. `git pull origin main`
+1. `git pull --ff-only origin main`
 2. Read the exact files you are about to change.
 3. Read the governance docs that apply to the task.
 4. Work from repo truth, not memory of a prior session.
@@ -67,7 +67,7 @@ Do not add stages, reorder stages, rename stages, or create a second spine.
 
 ## Current phase
 
-Current phase: Phase 4 Slice 3 — phrase grammar + app verbs + volume.
+Current phase: Phase 4.5 complete — pre-Phase 5.
 
 12 executable actions:
 
@@ -118,7 +118,7 @@ Phase 1 — Draggable strip. Complete.
 Phase 2 — Native Environment Index. Complete.
 Phase 3 — Preview + ghost completion. Complete.
 Phase 4 — Execution spine + outcome feedback + phrase grammar + app/volume verbs. Complete.
-Phase 4.5 — Live state hydration (running apps, frontmost app). Current.
+Phase 4.5 — Live state hydration (running apps, frontmost app). Complete.
 Phase 5 — Approval UI + durable history + undo. Future.
 Phase 6 — Provider interpretation (AI as typed parse generator). Future.
 
