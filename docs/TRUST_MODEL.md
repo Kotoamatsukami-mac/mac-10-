@@ -101,7 +101,7 @@ The governor attaches:
 
 ## Known limitation — approval is policy-only right now
 
-`app.quit` is attention-risk and currently reaches a gate instead of auto-running.
+`app.quit` is attention-risk and reaches a gate only when running-app evidence is available.
 
 Inline approval UI is not complete yet. Until that UI exists, Macten has approval policy metadata and gate outcomes, not a complete user approval interaction.
 
