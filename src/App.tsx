@@ -29,8 +29,8 @@ function shouldShowGhost(p: PreviewPrediction | null): boolean {
 }
 
 // When the typed input alias-matches an entity completely (no remaining
-// characters to suggest as ghost text) but the prediction is still resolved
-// and executable, surface the resolved label as a right-aligned affordance.
+// characters to suggest as ghost text) but the prediction still resolves to a
+// target, surface the resolved label as a right-aligned affordance.
 // This eliminates the dead-zone where typing 'settings' resolves correctly
 // but the strip looked idle. Pure visual; Enter behaviour unchanged.
 function resolvedAffordance(
@@ -229,7 +229,6 @@ export default function App() {
             ref={inputRef}
             className="command-input"
             type="text"
-            placeholder=""
             value={value}
             onChange={(e) => {
               setValue(e.target.value);
