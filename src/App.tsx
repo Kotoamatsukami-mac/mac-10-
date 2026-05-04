@@ -96,6 +96,9 @@ export default function App() {
   const fillFromCommand = (cmd: string) => {
     setValue(cmd);
     setInputHovered(false);
+    setDismissed(true);
+    setSelectedIndex(-1);
+
     requestAnimationFrame(() => {
       const el = inputRef.current;
       if (!el) return;
