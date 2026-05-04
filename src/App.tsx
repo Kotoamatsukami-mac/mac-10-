@@ -79,37 +79,52 @@ export default function App() {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
   const [inputHovered, setInputHovered] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
   const [promptHint, setPromptHint] = useState<string>(() => pickPromptHint());
   const inputRef = useRef<HTMLInputElement>(null);
+  const stripRef = useRef<HTMLElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const statusTimerRef = useRef<number | null>(null);
 
-  const { prediction, snapshot, resolveNow } = usePreviewPrediction(value);
-  const showGhost = shouldShowGhost(prediction);
-  const ghostVisible = status.kind === "idle" && showGhost && !helpOpen;
-  const completion = ghostVisible && prediction ? prediction.completion : "";
-  const affordance =
-    status.kind === "idle" && !showGhost && !helpOpen
-      ? resolvedAffordance(prediction, value)
-      : null;
+  const { prediction, snapshot, resolveNow, getSuggestions } =
+    usePreviewPrediction(value);
   const showPrompt = status.kind === "idle" && !value && !helpOpen;
-  // Hover/focus dropdown surfaces the example pool when the strip is at
-  // rest. It cannot appear while typing, while a status is showing, or
-  // while the help panel is open — it shares its gating with showPrompt.
-  const showHoverDropdown = showPrompt && (focused || inputHovered) && !menuOpen;
 
-  const fillFromHint = (hint: string) => {
-    // Hints look like: Try "open Safari"
-    // Extract the quoted command and place it directly into the input.
-    const match = /"([^"]+)"/.exec(hint);
-    if (!match || !match[1]) return;
-    setValue(match[1]);
+  // Engagement-driven dropdown visibility.
+  //
+  // The dropdown follows user intent, not typing state. It opens when the
+  // user signals engagement (input focus, input hover) and closes when the
+  // user signals dismissal (Escape, click outside, window blur). Once
+  // dismissed, it does not return until the user re-engages explicitly.
+  // Typing alone — including continuing to type after dismissal — does
+  // not reopen it.
+  const engaged = (focused || inputHovered) && !dismissed;
+  const showDropdown =
+    engaged && status.kind === "idle" && !menuOpen && !helpOpen;
+
+  // Dropdown contents: empty input shows the static pool, non-empty input
+  // shows live resolver suggestions. Both branches return a list of
+  // command strings that can be filled directly into the input.
+  const suggestions: string[] = (() => {
+    if (!showDropdown) return [];
+    if (!value.trim()) {
+      // Empty input → static pool. Strip the 'Try "..."' wrapper.
+      return PROMPT_HINTS.map(
+        (h) => /"([^"]+)"/.exec(h)?.[1] ?? h,
+      );
+    }
+    return getSuggestions(value, 6).map((s) => s.fill);
+  })();
+
+  const fillFromCommand = (cmd: string) => {
+    setValue(cmd);
     setInputHovered(false);
     requestAnimationFrame(() => {
       const el = inputRef.current;
       if (!el) return;
       el.focus();
-      el.setSelectionRange(match[1]!.length, match[1]!.length);
+      el.setSelectionRange(cmd.length, cmd.length);
     });
   };
 
@@ -144,6 +159,40 @@ export default function App() {
     return () => { unlisten?.(); };
   }, []);
 
+  // Outside-click dismissal: a pointerdown anywhere outside the strip and
+  // outside the dropdown panel signals the user is done with the dropdown
+  // for now. It stays dismissed until explicit re-engagement.
+  useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      const insideStrip = stripRef.current?.contains(target);
+      const insideDropdown = dropdownRef.current?.contains(target);
+      if (!insideStrip && !insideDropdown) {
+        setDismissed(true);
+        setInputHovered(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, []);
+
+  // Window-blur dismissal: when the Macten window loses focus (user
+  // switches apps, clicks another window), treat it as a dismissal. The
+  // dropdown will not reappear until the user re-engages the input.
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    getCurrentWindow()
+      .listen("tauri://blur", () => {
+        setDismissed(true);
+        setInputHovered(false);
+        setFocused(false);
+      })
+      .then((fn) => { unlisten = fn; })
+      .catch(() => {});
+    return () => { unlisten?.(); };
+  }, []);
+
   const togglePin = async () => {
     const next = !pinned;
     setPinned(next);
@@ -160,17 +209,6 @@ export default function App() {
     getCurrentWindow().startDragging().catch(() => {});
   };
 
-  const acceptCompletion = () => {
-    if (!completion) return;
-    const next = value + completion;
-    setValue(next);
-    requestAnimationFrame(() => {
-      const el = inputRef.current;
-      if (!el) return;
-      el.setSelectionRange(next.length, next.length);
-    });
-  };
-
   const submit = async () => {
     const submittedInput = value.trim();
     if (!submittedInput) return;
@@ -182,6 +220,7 @@ export default function App() {
     }
 
     setHelpOpen(false);
+    setDismissed(true); // submitting is itself a dismissal of the dropdown
 
     const resolved = resolveNow(submittedInput);
     const resolveStatus = statusFromResolveNow(resolved);
@@ -206,21 +245,14 @@ export default function App() {
     if (e.key === "Escape") {
       e.preventDefault();
       if (menuOpen || helpOpen) { closeOverlays(); return; }
+      // No popover open → Escape dismisses the dropdown.
+      setDismissed(true);
       return;
     }
     if (e.key === "Enter") {
       e.preventDefault();
       void submit();
       return;
-    }
-    if (!ghostVisible || !completion) return;
-    if (e.key === "Tab") { e.preventDefault(); acceptCompletion(); return; }
-    if (e.key === "ArrowRight") {
-      const el = e.currentTarget;
-      if (el.selectionStart === el.value.length && el.selectionEnd === el.value.length) {
-        e.preventDefault();
-        acceptCompletion();
-      }
     }
   };
 
@@ -242,7 +274,7 @@ export default function App() {
         {/* Input — single-element prompt, never inline-collides */}
         <div
           className="input-wrap no-drag"
-          onMouseEnter={() => setInputHovered(true)}
+          onMouseEnter={() => { setInputHovered(true); setDismissed(false); }}
           onMouseLeave={() => setInputHovered(false)}
         >
           <div className="input-stack">
@@ -258,19 +290,6 @@ export default function App() {
                   {status.msg}
                 </span>
               </div>
-            ) : ghostVisible && prediction ? (
-              <div className="input-ghost" aria-hidden="true">
-                <span className="ghost-typed">{value}</span>
-                <span className="ghost-completion">{prediction.completion}</span>
-              </div>
-            ) : affordance ? (
-              <div className="input-affordance" aria-hidden="true">
-                <span className="affordance-typed">{value}</span>
-                <span className="affordance-trail">
-                  <span className="affordance-arrow">↩</span>
-                  <span className="affordance-label">{affordance}</span>
-                </span>
-              </div>
             ) : null}
             <input
               ref={inputRef}
@@ -280,6 +299,7 @@ export default function App() {
               aria-label="Command"
               onFocus={() => {
                 setFocused(true);
+                setDismissed(false);
                 if (!value) setPromptHint(pickPromptHint());
               }}
               onBlur={() => setFocused(false)}
@@ -322,28 +342,28 @@ export default function App() {
         </div>
       </section>
 
-      {showHoverDropdown && (
+      {showDropdown && suggestions.length > 0 && (
         <aside
+          ref={dropdownRef}
           className="hover-dropdown no-drag"
-          aria-label="Example commands"
-          onMouseEnter={() => setInputHovered(true)}
+          aria-label="Command suggestions"
+          onMouseEnter={() => { setInputHovered(true); setDismissed(false); }}
           onMouseLeave={() => setInputHovered(false)}
         >
-          <span className="hover-dropdown__caption">Try one</span>
+          <span className="hover-dropdown__caption">
+            {value.trim() ? "Matches" : "Try one"}
+          </span>
           <div className="hover-dropdown__rows">
-            {PROMPT_HINTS.map((hint) => {
-              const cmd = /"([^"]+)"/.exec(hint)?.[1] ?? hint;
-              return (
-                <button
-                  key={hint}
-                  type="button"
-                  className="hover-dropdown__row"
-                  onClick={() => fillFromHint(hint)}
-                >
-                  <code className="hover-dropdown__cmd">{cmd}</code>
-                </button>
-              );
-            })}
+            {suggestions.map((cmd) => (
+              <button
+                key={cmd}
+                type="button"
+                className="hover-dropdown__row"
+                onClick={() => fillFromCommand(cmd)}
+              >
+                <code className="hover-dropdown__cmd">{cmd}</code>
+              </button>
+            ))}
           </div>
         </aside>
       )}
