@@ -154,12 +154,12 @@ html, body, #root {
     transparent 100%
   );
   filter: blur(0.4px);
-  opacity: 0.62;
+  opacity: 0.42;
   transition: opacity 320ms ease;
 }
 
 .strip.is-focused .strip-rim {
-  opacity: 0.84;
+  opacity: 0.96;
 }
 
 /* Top specular — thin lit seam */

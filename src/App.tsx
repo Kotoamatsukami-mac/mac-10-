@@ -22,6 +22,26 @@ const STATUS_DURATIONS_MS: Record<Exclude<StripStatus["kind"], "idle">, number> 
   blocked: 3200,
 };
 
+// Rotating example commands shown in the empty prompt's helper line.
+// Pulled from the live command surface — no aspirational copy. Each focus
+// without prior typing rolls a new one so the strip feels lived-in.
+const PROMPT_HINTS: readonly string[] = [
+  'Try "open Safari"',
+  'Try "quit Spotify"',
+  'Try "volume 50"',
+  'Try "downloads"',
+  'Try "focus Chrome"',
+  'Try "mute"',
+  'Try "open Settings"',
+] as const;
+
+function pickPromptHint(): string {
+  // PROMPT_HINTS is non-empty and Math.floor(random * length) is in [0, length-1].
+  // The non-null assertion keeps the function string-returning under
+  // noUncheckedIndexedAccess without spurious branching.
+  return PROMPT_HINTS[Math.floor(Math.random() * PROMPT_HINTS.length)]!;
+}
+
 function shouldShowGhost(p: PreviewPrediction | null): boolean {
   if (!p || !p.completion) return false;
   switch (p.confidence_tier) {
@@ -59,6 +79,7 @@ export default function App() {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
+  const [promptHint, setPromptHint] = useState<string>(() => pickPromptHint());
   const inputRef = useRef<HTMLInputElement>(null);
   const statusTimerRef = useRef<number | null>(null);
 
@@ -204,7 +225,7 @@ export default function App() {
             {showPrompt ? (
               <div className="empty-prompt" aria-hidden="true">
                 <span className="prompt-title">Ask your Mac</span>
-                <span className="prompt-hint">Try "open Safari"</span>
+                <span className="prompt-hint">{promptHint}</span>
               </div>
             ) : status.kind !== "idle" ? (
               <div className="status-line" aria-hidden="true">
@@ -233,7 +254,10 @@ export default function App() {
               type="text"
               value={value}
               aria-label="Command"
-              onFocus={() => setFocused(true)}
+              onFocus={() => {
+                setFocused(true);
+                if (!value) setPromptHint(pickPromptHint());
+              }}
               onBlur={() => setFocused(false)}
               onChange={(e) => {
                 setValue(e.target.value);
