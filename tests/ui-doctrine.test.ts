@@ -81,6 +81,29 @@ test("ui doctrine: hover dropdown renders ranked fill-only suggestion rows", () 
     );
   }
 
+  const dropdownBlock = matchBetween(
+    APP,
+    '<div className="hover-dropdown__rows">',
+    "{menuOpen && (",
+  );
+  assert.ok(dropdownBlock, "App.tsx must render hover dropdown rows");
+  assert.ok(
+    dropdownBlock!.includes("title={item.fill}") || dropdownBlock!.includes("aria-label={item.fill}"),
+    "dropdown rows must expose the full fill command via title or aria-label",
+  );
+  assert.ok(
+    dropdownBlock!.includes("onClick={() => fillFromCommand(item.fill)}"),
+    "dropdown row click must fill the command string",
+  );
+  assert.ok(
+    !/onClick=\{[^}]*submit\(/s.test(dropdownBlock!),
+    "dropdown row onClick must not submit",
+  );
+  assert.ok(
+    !/runSpine\s*\(/.test(dropdownBlock!),
+    "dropdown row logic must not call runSpine",
+  );
+
   assert.ok(
     !/from\s+["']\.\/spine\/executor["']/.test(APP),
     "App.tsx must not import spine/executor for dropdown projection",
@@ -89,6 +112,35 @@ test("ui doctrine: hover dropdown renders ranked fill-only suggestion rows", () 
     !/from\s+["']\.\/spine\/governor["']/.test(APP),
     "App.tsx must not import spine/governor for dropdown projection",
   );
+});
+
+// ────────────────────────────────────────────────────────────────────
+// The ranked dropdown remains compact projection, not a card stack or
+// permission/status UI. Confidence tier classes can differ, but row
+// rules must not grow vertical dividers.
+// ────────────────────────────────────────────────────────────────────
+
+test("ui doctrine: hover dropdown CSS keeps ranked rows restrained", () => {
+  const requiredTiers = ["exact", "prefix", "contains", "static"];
+  for (const tier of requiredTiers) {
+    assert.ok(
+      CSS.includes(`.hover-dropdown__confidence-${tier}`),
+      `styles.css must define confidence tier .hover-dropdown__confidence-${tier}`,
+    );
+    assert.ok(
+      CSS.includes(`.hover-dropdown__row-${tier}`),
+      `styles.css must define row tier .hover-dropdown__row-${tier}`,
+    );
+  }
+
+  const rowRules = matchRules(CSS, /^\.hover-dropdown__row[^{]*\{/gm);
+  assert.ok(rowRules.length > 0, "styles.css must define hover dropdown row rules");
+  for (const rule of rowRules) {
+    assert.ok(
+      !/border-(left|right)\s*:/.test(rule),
+      "hover dropdown row rules must not introduce internal vertical dividers",
+    );
+  }
 });
 
 // ────────────────────────────────────────────────────────────────────
@@ -247,4 +299,21 @@ function matchRule(css: string, selector: RegExp): string | null {
     i += 1;
   }
   return depth === 0 ? css.slice(start + 1, i - 1) : null;
+}
+
+function matchRules(css: string, selector: RegExp): string[] {
+  const out: string[] = [];
+  for (const match of css.matchAll(selector)) {
+    const rule = matchRule(css.slice(match.index), /./);
+    if (rule !== null) out.push(rule);
+  }
+  return out;
+}
+
+function matchBetween(text: string, startNeedle: string, endNeedle: string): string | null {
+  const start = text.indexOf(startNeedle);
+  if (start < 0) return null;
+  const end = text.indexOf(endNeedle, start);
+  if (end < 0) return null;
+  return text.slice(start, end);
 }

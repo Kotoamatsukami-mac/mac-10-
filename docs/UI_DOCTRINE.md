@@ -126,7 +126,7 @@ The whole system asks for attention without raising its voice.
 - Tool buttons: 32 × 32 px, radius 9 px
 - Settings popover: 268 px wide, top: 100 px
 - Help panel: `min(560px, calc(100vw - 48px))` wide, top: 100 px
-- Hover dropdown: `min(360px, calc(100vw - 48px))` wide, top: 100 px
+- Hover dropdown: `min(360px, calc(100vw - 48px))` wide, top: 96 px
 
 ## Principle — popovers and panels follow strip discipline
 
@@ -151,10 +151,13 @@ Behavior:
 
 - Each row is a `<button type="button">` rendered as a fill candidate, not an execution claim
 - Rows display a compact intent badge, target label, and confidence dot
+- The intent badge means "what would be filled," not "what is authorized"
+- The confidence dot means resolver confidence tier, not permission state
 - Confidence tiers are visual only: exact brightest, prefix medium, contains/fuzzy faint, ambiguous/no-match defensive, static neutral
 - Click on a row populates the input with the full command string, dismisses the dropdown, and refocuses
 - Click does not submit; Enter is still required to submit
 - Submit still re-resolves the input through `resolveNow` and the spine before any command can run
+- Full authority begins only after submit: `resolveNow` -> parser -> validator -> governor -> executor
 - The dropdown's own `onMouseEnter`/`onMouseLeave` keeps it open while the cursor moves between input and dropdown
 - An 180 ms slide-down intro animation; disabled under `prefers-reduced-motion: reduce`
 

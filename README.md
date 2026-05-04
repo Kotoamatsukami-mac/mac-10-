@@ -104,7 +104,7 @@ Do not document future work as current behavior. Do not add architecture languag
 | `docs/COMMAND_SPINE.md` | Exact submit path and owner files |
 | `docs/TRUST_MODEL.md` | Validation, governance, approval, undo, and history model |
 | `docs/ACTION_SURFACE.md` | Current 12-action command surface |
-| `docs/UI_DOCTRINE.md` | Strip slot model, design tokens, hover/focus discipline, do-not-introduce list |
+| `docs/UI_DOCTRINE.md` | Strip slot model, design tokens, ranked dropdown projection, do-not-introduce list |
 | `docs/BUILD_PHASES.md` | Phase map and implementation status |
 | `docs/DECISIONS.md` | Architectural decision records (ADRs) |
 | `docs/LESSONS.md` | Reproducible failure modes to avoid |
