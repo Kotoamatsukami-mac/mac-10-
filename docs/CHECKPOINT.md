@@ -4,6 +4,8 @@
 
 Phase 4.5 — Live runtime state hydration + intent-aware resolution.
 
+UI: midnight crisp shell, three-slot strip, ambient drag, identity dot. Locked in `docs/UI_DOCTRINE.md` and ADR-002.
+
 ```text
 Phase 1: Draggable transparent command strip
 Phase 2: NativeEnvironmentSnapshot from the Mac environment
@@ -12,7 +14,11 @@ Phase 3 Slice 2: Ghost completion preview UI
 Phase 4 Slice 1: parser → validator → risk → approve → executor → history
 Phase 4 Slice 2: Outcome feedback — StripStatus overlay in strip
 Phase 4 Slice 3: Phrase grammar, app verbs (quit/hide/focus), volume control
+Phase 4 Slice 4: Contextual governor + undo policy groundwork
 Phase 4.5: Live runtime hydration — running_apps + frontmost_app are real native data
+UI midnight pass: void glass dark-mode polish, helper text, chip status
+UI composition pass: tightened shell, sculpted hardware buttons, midnight glass, faint rim, restrained accent
+UI crispness pass: identity dot, no internal dividers, sharper input typography, trimmed toolbar
 ```
 
 ## Live runtime state (Phase 4.5)
