@@ -41,6 +41,40 @@ function isHelpInput(raw: string): boolean {
   return HELP_TRIGGERS.includes(raw.trim().toLowerCase());
 }
 
+type DropdownSuggestion = {
+  fill: string;
+  label: string;
+  intent: string;
+  tier: "exact" | "prefix" | "contains" | "fuzzy" | "ambiguous" | "no_match" | "static";
+};
+
+function commandFromPromptHint(hint: string): string {
+  return /"([^"]+)"/.exec(hint)?.[1] ?? hint;
+}
+
+function intentBadgeFor(fill: string): string {
+  return fill.trim().split(/\s+/, 1)[0]?.toLowerCase() || "try";
+}
+
+function labelFromCommand(fill: string): string {
+  const trimmed = fill.trim();
+  const [, label] = /^(\S+)\s+(.+)$/.exec(trimmed) ?? [];
+  return label ?? trimmed;
+}
+
+function staticDropdownSuggestion(fill: string): DropdownSuggestion {
+  return {
+    fill,
+    label: labelFromCommand(fill),
+    intent: intentBadgeFor(fill),
+    tier: "static",
+  };
+}
+
+function shortIntentLabel(intent: string): string {
+  return intent.trim().toLowerCase() || "try";
+}
+
 export default function App() {
   const [pinned, setPinned] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,21 +108,23 @@ export default function App() {
     engaged && status.kind === "idle" && !menuOpen && !helpOpen;
 
   // Dropdown contents: empty input shows the static pool, non-empty input
-  // shows live resolver suggestions. Both branches return a list of
-  // command strings that can be filled directly into the input.
-  const suggestions: string[] = (() => {
+  // shows live resolver suggestions. Both branches are fill-only projection
+  // rows; submit still re-resolves the input through the spine.
+  const suggestions: DropdownSuggestion[] = (() => {
     if (!showDropdown) return [];
     if (!value.trim()) {
-      // Empty input → static pool. Strip the 'Try "..."' wrapper.
-      return PROMPT_HINTS.map(
-        (h) => /"([^"]+)"/.exec(h)?.[1] ?? h,
-      );
+      return PROMPT_HINTS.map(commandFromPromptHint).map(staticDropdownSuggestion);
     }
-    return getSuggestions(value, 6).map((s) => s.fill);
+    return getSuggestions(value, 6).map((s) => ({
+      fill: s.fill,
+      label: s.label,
+      intent: s.intent,
+      tier: s.tier,
+    }));
   })();
 
   // Reset keyboard selection when suggestions change.
-  const suggestionsKey = suggestions.join("|");
+  const suggestionsKey = suggestions.map((s) => `${s.intent}:${s.fill}:${s.tier}`).join("|");
   useEffect(() => {
     setSelectedIndex(-1);
   }, [suggestionsKey]);
@@ -248,7 +284,7 @@ export default function App() {
       if (e.key === "Tab" && selectedIndex >= 0) {
         e.preventDefault();
         const sel = suggestions[selectedIndex];
-        if (sel) fillFromCommand(sel);
+        if (sel) fillFromCommand(sel.fill);
         return;
       }
     }
@@ -258,7 +294,7 @@ export default function App() {
       // If a dropdown suggestion is keyboard-selected, fill it instead of submitting.
       if (showDropdown && selectedIndex >= 0) {
         const sel = suggestions[selectedIndex];
-        if (sel) { fillFromCommand(sel); return; }
+        if (sel) { fillFromCommand(sel.fill); return; }
       }
       void submit();
       return;
@@ -364,14 +400,17 @@ export default function App() {
             {value.trim() ? "Matches" : "Try one"}
           </span>
           <div className="hover-dropdown__rows">
-            {suggestions.map((cmd, i) => (
+            {suggestions.map((item, i) => (
               <button
-                key={cmd}
+                key={`${item.intent}:${item.fill}`}
                 type="button"
-                className={`hover-dropdown__row${i === selectedIndex ? " is-selected" : ""}`}
-                onClick={() => fillFromCommand(cmd)}
+                className={`hover-dropdown__row hover-dropdown__row-${item.tier}${i === selectedIndex ? " is-selected" : ""}`}
+                onClick={() => fillFromCommand(item.fill)}
+                title={item.fill}
               >
-                {cmd}
+                <span className="hover-dropdown__intent">{shortIntentLabel(item.intent)}</span>
+                <span className="hover-dropdown__label">{item.label}</span>
+                <span className={`hover-dropdown__confidence hover-dropdown__confidence-${item.tier}`} aria-hidden="true" />
               </button>
             ))}
           </div>

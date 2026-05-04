@@ -134,32 +134,40 @@ The settings popover, help panel, and hover dropdown inherit the strip's design 
 
 Popovers should not introduce new accent colors, new typography weights, or new border tiers. They are quieter children of the strip.
 
-## Verified — hover dropdown surface
+## Verified — hover dropdown ranked projection
 
-The hover dropdown (`.hover-dropdown`) surfaces the example-command pool when the strip is at rest and the user engages the input via hover or focus.
+The hover dropdown (`.hover-dropdown`) is a ranked suggestion projection. It surfaces the example-command pool when the input is empty and projects resolver suggestions while the user types, but it never becomes command authority.
 
 Owner: `src/App.tsx` (state + render) and `src/styles.css` (geometry + glass).
 
 Gating:
 
-- Visible only when `showPrompt` is true (`status.kind === "idle" && !value && !helpOpen`)
-- AND `(focused || inputHovered)` AND `!menuOpen`
-- Cannot appear while typing, while a status is showing, while ghost completion is showing, or while another popover is open
+- Visible only when the user is engaged with the input (`focused || inputHovered`) and has not dismissed it
+- Requires `status.kind === "idle"`
+- Cannot appear while help or settings popovers are open
+- Empty input uses static `PROMPT_HINTS`; non-empty input uses `getSuggestions(value, 6)`
 
 Behavior:
 
-- Each row is a `<button type="button">` carrying a quoted command
-- Click on a row populates the input with the command and refocuses
+- Each row is a `<button type="button">` rendered as a fill candidate, not an execution claim
+- Rows display a compact intent badge, target label, and confidence dot
+- Confidence tiers are visual only: exact brightest, prefix medium, contains/fuzzy faint, ambiguous/no-match defensive, static neutral
+- Click on a row populates the input with the full command string, dismisses the dropdown, and refocuses
+- Click does not submit; Enter is still required to submit
+- Submit still re-resolves the input through `resolveNow` and the spine before any command can run
 - The dropdown's own `onMouseEnter`/`onMouseLeave` keeps it open while the cursor moves between input and dropdown
 - An 180 ms slide-down intro animation; disabled under `prefers-reduced-motion: reduce`
 
 Geometry:
 
 - Width: `min(360px, calc(100vw - 48px))`
-- Top: 100 px (same baseline as settings popover and help panel — they mutually exclude)
-- Padding: 8 / 6 / 10 px
+- Top: 96 px
+- Padding: 6 / 4 / 8 px
+- Rows are compact, open, and aligned without internal vertical dividers
 
-The dropdown is data-driven by `PROMPT_HINTS` in `src/App.tsx`. Adding a new hint adds a row automatically; the doctrine does not require an entry per hint.
+The dropdown is data-driven by `PROMPT_HINTS` and existing `Suggestion` metadata in `src/App.tsx`. Adding a new hint adds a static row automatically; changing ranked suggestion generation belongs outside this UI doctrine move.
+
+Suggestion rows must not display authority styling, approval styling, execution status, planner language, or anything implying the row has already resolved through the spine.
 
 ## Do not introduce — design drift
 

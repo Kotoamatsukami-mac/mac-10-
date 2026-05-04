@@ -366,7 +366,7 @@ html, body, #root {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   HOVER DROPDOWN — example commands surfaced on input hover/focus
+   HOVER DROPDOWN — ranked fill suggestions projected from the strip
    Same midnight glass language as settings + help, narrower and quieter
    ════════════════════════════════════════════════════════════════════ */
 
@@ -424,31 +424,134 @@ html, body, #root {
 }
 
 .hover-dropdown__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
+  gap: 8px;
   width: 100%;
-  padding: 6px 12px;
+  min-height: 30px;
+  padding: 6px 8px;
   border: 0;
   background: transparent;
   border-radius: 7px;
   cursor: pointer;
-  font-family: "SF Mono", "Menlo", "Monaco", monospace;
-  font-size: 13px;
-  font-weight: 480;
+  font: inherit;
   color: rgba(200, 215, 250, 0.82);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
+  text-align: left;
   transition: background 100ms ease, color 100ms ease;
 }
 
 .hover-dropdown__row:hover,
 .hover-dropdown__row.is-selected {
-  background: rgba(120, 140, 200, 0.10);
+  background: rgba(120, 140, 200, 0.11);
   color: rgba(220, 230, 255, 0.96);
 }
 
 .hover-dropdown__row:focus-visible {
   outline: 1px solid rgba(150, 170, 230, 0.4);
   outline-offset: -2px;
+}
+
+.hover-dropdown__intent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 18px;
+  padding: 0 5px;
+  overflow: hidden;
+  border: 1px solid rgba(180, 196, 240, 0.12);
+  border-radius: 5px;
+  background: rgba(180, 196, 240, 0.05);
+  color: rgba(220, 226, 244, 0.58);
+  font-family: "SF Mono", "Menlo", "Monaco", monospace;
+  font-size: 10px;
+  font-weight: 620;
+  letter-spacing: 0;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hover-dropdown__label {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(226, 234, 255, 0.82);
+  font-size: 13px;
+  font-weight: 520;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hover-dropdown__confidence {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(180, 196, 240, 0.22);
+  box-shadow: 0 0 0 1px rgba(180, 196, 240, 0.04);
+}
+
+.hover-dropdown__confidence-exact {
+  background: rgba(238, 242, 252, 0.86);
+  box-shadow: 0 0 10px rgba(180, 196, 240, 0.20);
+}
+
+.hover-dropdown__confidence-prefix {
+  background: rgba(170, 190, 255, 0.66);
+}
+
+.hover-dropdown__confidence-contains {
+  background: rgba(170, 190, 255, 0.34);
+}
+
+.hover-dropdown__confidence-fuzzy {
+  background: rgba(155, 141, 217, 0.38);
+}
+
+.hover-dropdown__confidence-ambiguous {
+  background: rgba(155, 141, 217, 0.30);
+}
+
+.hover-dropdown__confidence-no_match {
+  background: rgba(190, 198, 218, 0.18);
+}
+
+.hover-dropdown__confidence-static {
+  background: rgba(180, 196, 240, 0.26);
+}
+
+.hover-dropdown__row-exact .hover-dropdown__intent,
+.hover-dropdown__row-exact .hover-dropdown__label {
+  color: rgba(238, 242, 252, 0.92);
+}
+
+.hover-dropdown__row-prefix .hover-dropdown__label {
+  color: rgba(224, 232, 255, 0.78);
+}
+
+.hover-dropdown__row-contains .hover-dropdown__label,
+.hover-dropdown__row-fuzzy .hover-dropdown__label,
+.hover-dropdown__row-static .hover-dropdown__label {
+  color: rgba(218, 226, 248, 0.68);
+}
+
+.hover-dropdown__row-ambiguous .hover-dropdown__label,
+.hover-dropdown__row-no_match .hover-dropdown__label {
+  color: rgba(206, 214, 236, 0.48);
+}
+
+.hover-dropdown__row:hover .hover-dropdown__intent,
+.hover-dropdown__row.is-selected .hover-dropdown__intent {
+  border-color: rgba(190, 206, 248, 0.18);
+  background: rgba(190, 206, 248, 0.08);
+  color: rgba(232, 238, 255, 0.72);
+}
+
+.hover-dropdown__row:hover .hover-dropdown__label,
+.hover-dropdown__row.is-selected .hover-dropdown__label {
+  color: rgba(238, 242, 252, 0.94);
 }
 
 /* ════════════════════════════════════════════════════════════════════

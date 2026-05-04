@@ -63,6 +63,35 @@ test("ui doctrine: forbidden legacy selectors are absent", () => {
 });
 
 // ────────────────────────────────────────────────────────────────────
+// Predictive dropdown rows are a ranked suggestion projection. They
+// may expose existing Suggestion metadata, but App.tsx must not import
+// native execution/governance internals for dropdown display.
+// ────────────────────────────────────────────────────────────────────
+
+test("ui doctrine: hover dropdown renders ranked fill-only suggestion rows", () => {
+  const required = [
+    "hover-dropdown__intent",
+    "hover-dropdown__label",
+    "hover-dropdown__confidence",
+  ];
+  for (const selector of required) {
+    assert.ok(
+      APP.includes(selector),
+      `App.tsx must render .${selector} for ranked dropdown rows`,
+    );
+  }
+
+  assert.ok(
+    !/from\s+["']\.\/spine\/executor["']/.test(APP),
+    "App.tsx must not import spine/executor for dropdown projection",
+  );
+  assert.ok(
+    !/from\s+["']\.\/spine\/governor["']/.test(APP),
+    "App.tsx must not import spine/governor for dropdown projection",
+  );
+});
+
+// ────────────────────────────────────────────────────────────────────
 // Drag is owned by .strip, not the transparent surround. There must
 // be exactly one startDragging() call site. CSS app-region: drag must
 // live on .strip, not .shell-stage.
