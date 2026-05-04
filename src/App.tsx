@@ -183,10 +183,11 @@ export default function App() {
         <span className="strip-rim" aria-hidden="true" />
         <span className="strip-sheen" aria-hidden="true" />
 
-        {/* Command mark — small, refined, restrained */}
-        <div className="cmd-mark no-drag" aria-hidden="true">
-          <CmdGlyph />
-        </div>
+        {/* Identity dot — status-aware, the only thing on the left edge */}
+        <span
+          className={`identity-dot identity-dot-${status.kind}`}
+          aria-hidden="true"
+        />
 
         {/* Input — single-element prompt, never inline-collides */}
         <div className="input-wrap no-drag">
@@ -310,20 +311,6 @@ export default function App() {
 }
 
 /* ── Inline icon set — clean SVG, no CSS hacks ──────────────────────────── */
-
-function CmdGlyph() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <path
-        d="M4 1.5a2 2 0 0 1 2 2v6a2 2 0 1 1-2-2h6a2 2 0 1 1-2 2v-6a2 2 0 1 1 2 2H4a2 2 0 1 1-2-2"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function LayerIcon({ size = 20 }: { size?: number }) {
   return (
