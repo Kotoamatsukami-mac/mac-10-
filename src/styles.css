@@ -317,22 +317,6 @@ html, body, #root {
   opacity: 1;
 }
 
-/* ── Ghost completion ── */
-.input-ghost {
-  font-size: 15.5px;
-  font-weight: 400;
-  letter-spacing: -0.012em;
-}
-
-.ghost-typed { color: transparent; }
-
-.ghost-completion {
-  color: var(--ghost-color);
-  font-size: 15.5px;
-  font-weight: 400;
-  letter-spacing: -0.012em;
-}
-
 /* ── Affordance ── */
 .input-affordance {
   justify-content: space-between;

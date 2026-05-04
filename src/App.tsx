@@ -3,15 +3,12 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { usePreviewPrediction } from "./hooks/usePreviewPrediction";
-import type { PreviewPrediction } from "./resolver/previewResolver";
 import { runSpine } from "./spine/runSpine";
 import {
   type StripStatus,
   statusFromOutcome,
   statusFromResolveNow,
 } from "./spine/outcomeMessage";
-
-const GHOST_DISPLAY_THRESHOLD = 0.28;
 
 // How long each status kind remains visible before reverting to idle.
 // Lives at module scope so the durations are inspectable in one place
@@ -36,35 +33,7 @@ const PROMPT_HINTS: readonly string[] = [
 ] as const;
 
 function pickPromptHint(): string {
-  // PROMPT_HINTS is non-empty and Math.floor(random * length) is in [0, length-1].
-  // The non-null assertion keeps the function string-returning under
-  // noUncheckedIndexedAccess without spurious branching.
   return PROMPT_HINTS[Math.floor(Math.random() * PROMPT_HINTS.length)]!;
-}
-
-function shouldShowGhost(p: PreviewPrediction | null): boolean {
-  if (!p || !p.completion) return false;
-  switch (p.confidence_tier) {
-    case "exact":
-    case "prefix":
-      return true;
-    case "contains":
-      return p.confidence >= GHOST_DISPLAY_THRESHOLD;
-    default:
-      return false;
-  }
-}
-
-function resolvedAffordance(
-  p: PreviewPrediction | null,
-  typed: string,
-): string | null {
-  if (!p || !p.target_ref) return null;
-  if (p.completion) return null;
-  if (p.confidence_tier !== "exact" && p.confidence_tier !== "prefix") return null;
-  const label = p.target_ref.label;
-  if (label.trim().toLowerCase() === typed.trim().toLowerCase()) return null;
-  return label;
 }
 
 const HELP_TRIGGERS = ["help", "?", "commands"];
@@ -87,7 +56,7 @@ export default function App() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const statusTimerRef = useRef<number | null>(null);
 
-  const { prediction, snapshot, resolveNow, getSuggestions } =
+  const { snapshot, resolveNow, getSuggestions } =
     usePreviewPrediction(value);
   const showPrompt = status.kind === "idle" && !value && !helpOpen;
 
