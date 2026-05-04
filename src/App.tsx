@@ -13,6 +13,15 @@ import {
 
 const GHOST_DISPLAY_THRESHOLD = 0.28;
 
+// How long each status kind remains visible before reverting to idle.
+// Lives at module scope so the durations are inspectable in one place
+// rather than buried inside an event handler.
+const STATUS_DURATIONS_MS: Record<Exclude<StripStatus["kind"], "idle">, number> = {
+  ok: 1400,
+  hint: 2800,
+  blocked: 3200,
+};
+
 function shouldShowGhost(p: PreviewPrediction | null): boolean {
   if (!p || !p.completion) return false;
   switch (p.confidence_tier) {
@@ -74,7 +83,7 @@ export default function App() {
     clearStatusTimer();
     setStatus(next);
     if (next.kind === "idle") return;
-    const ms = next.kind === "ok" ? 1400 : next.kind === "hint" ? 2800 : 3200;
+    const ms = STATUS_DURATIONS_MS[next.kind];
     statusTimerRef.current = window.setTimeout(() => {
       statusTimerRef.current = null;
       setStatus({ kind: "idle" });
