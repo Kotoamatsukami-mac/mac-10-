@@ -78,6 +78,7 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
+  const [inputHovered, setInputHovered] = useState(false);
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
   const [promptHint, setPromptHint] = useState<string>(() => pickPromptHint());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +93,25 @@ export default function App() {
       ? resolvedAffordance(prediction, value)
       : null;
   const showPrompt = status.kind === "idle" && !value && !helpOpen;
+  // Hover/focus dropdown surfaces the example pool when the strip is at
+  // rest. It cannot appear while typing, while a status is showing, or
+  // while the help panel is open — it shares its gating with showPrompt.
+  const showHoverDropdown = showPrompt && (focused || inputHovered) && !menuOpen;
+
+  const fillFromHint = (hint: string) => {
+    // Hints look like: Try "open Safari"
+    // Extract the quoted command and place it directly into the input.
+    const match = /"([^"]+)"/.exec(hint);
+    if (!match || !match[1]) return;
+    setValue(match[1]);
+    setInputHovered(false);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(match[1]!.length, match[1]!.length);
+    });
+  };
 
   const clearStatusTimer = () => {
     if (statusTimerRef.current !== null) {
@@ -220,7 +240,11 @@ export default function App() {
         />
 
         {/* Input — single-element prompt, never inline-collides */}
-        <div className="input-wrap no-drag">
+        <div
+          className="input-wrap no-drag"
+          onMouseEnter={() => setInputHovered(true)}
+          onMouseLeave={() => setInputHovered(false)}
+        >
           <div className="input-stack">
             {showPrompt ? (
               <div className="empty-prompt" aria-hidden="true">
@@ -297,6 +321,32 @@ export default function App() {
           </button>
         </div>
       </section>
+
+      {showHoverDropdown && (
+        <aside
+          className="hover-dropdown no-drag"
+          aria-label="Example commands"
+          onMouseEnter={() => setInputHovered(true)}
+          onMouseLeave={() => setInputHovered(false)}
+        >
+          <span className="hover-dropdown__caption">Try one</span>
+          <div className="hover-dropdown__rows">
+            {PROMPT_HINTS.map((hint) => {
+              const cmd = /"([^"]+)"/.exec(hint)?.[1] ?? hint;
+              return (
+                <button
+                  key={hint}
+                  type="button"
+                  className="hover-dropdown__row"
+                  onClick={() => fillFromHint(hint)}
+                >
+                  <code className="hover-dropdown__cmd">{cmd}</code>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+      )}
 
       {menuOpen && (
         <aside
