@@ -3,15 +3,12 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { usePreviewPrediction } from "./hooks/usePreviewPrediction";
-import type { PreviewPrediction } from "./resolver/previewResolver";
 import { runSpine } from "./spine/runSpine";
 import {
   type StripStatus,
   statusFromOutcome,
   statusFromResolveNow,
 } from "./spine/outcomeMessage";
-
-const GHOST_DISPLAY_THRESHOLD = 0.28;
 
 // How long each status kind remains visible before reverting to idle.
 // Lives at module scope so the durations are inspectable in one place
@@ -36,35 +33,7 @@ const PROMPT_HINTS: readonly string[] = [
 ] as const;
 
 function pickPromptHint(): string {
-  // PROMPT_HINTS is non-empty and Math.floor(random * length) is in [0, length-1].
-  // The non-null assertion keeps the function string-returning under
-  // noUncheckedIndexedAccess without spurious branching.
   return PROMPT_HINTS[Math.floor(Math.random() * PROMPT_HINTS.length)]!;
-}
-
-function shouldShowGhost(p: PreviewPrediction | null): boolean {
-  if (!p || !p.completion) return false;
-  switch (p.confidence_tier) {
-    case "exact":
-    case "prefix":
-      return true;
-    case "contains":
-      return p.confidence >= GHOST_DISPLAY_THRESHOLD;
-    default:
-      return false;
-  }
-}
-
-function resolvedAffordance(
-  p: PreviewPrediction | null,
-  typed: string,
-): string | null {
-  if (!p || !p.target_ref) return null;
-  if (p.completion) return null;
-  if (p.confidence_tier !== "exact" && p.confidence_tier !== "prefix") return null;
-  const label = p.target_ref.label;
-  if (label.trim().toLowerCase() === typed.trim().toLowerCase()) return null;
-  return label;
 }
 
 const HELP_TRIGGERS = ["help", "?", "commands"];
@@ -78,20 +47,55 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
+  const [inputHovered, setInputHovered] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
   const [promptHint, setPromptHint] = useState<string>(() => pickPromptHint());
   const inputRef = useRef<HTMLInputElement>(null);
+  const stripRef = useRef<HTMLElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const statusTimerRef = useRef<number | null>(null);
 
-  const { prediction, snapshot, resolveNow } = usePreviewPrediction(value);
-  const showGhost = shouldShowGhost(prediction);
-  const ghostVisible = status.kind === "idle" && showGhost && !helpOpen;
-  const completion = ghostVisible && prediction ? prediction.completion : "";
-  const affordance =
-    status.kind === "idle" && !showGhost && !helpOpen
-      ? resolvedAffordance(prediction, value)
-      : null;
+  const { snapshot, resolveNow, getSuggestions } =
+    usePreviewPrediction(value);
   const showPrompt = status.kind === "idle" && !value && !helpOpen;
+
+  // Engagement-driven dropdown visibility.
+  //
+  // The dropdown follows user intent, not typing state. It opens when the
+  // user signals engagement (input focus, input hover) and closes when the
+  // user signals dismissal (Escape, click outside, window blur). Once
+  // dismissed, it does not return until the user re-engages explicitly.
+  // Typing alone — including continuing to type after dismissal — does
+  // not reopen it.
+  const engaged = (focused || inputHovered) && !dismissed;
+  const showDropdown =
+    engaged && status.kind === "idle" && !menuOpen && !helpOpen;
+
+  // Dropdown contents: empty input shows the static pool, non-empty input
+  // shows live resolver suggestions. Both branches return a list of
+  // command strings that can be filled directly into the input.
+  const suggestions: string[] = (() => {
+    if (!showDropdown) return [];
+    if (!value.trim()) {
+      // Empty input → static pool. Strip the 'Try "..."' wrapper.
+      return PROMPT_HINTS.map(
+        (h) => /"([^"]+)"/.exec(h)?.[1] ?? h,
+      );
+    }
+    return getSuggestions(value, 6).map((s) => s.fill);
+  })();
+
+  const fillFromCommand = (cmd: string) => {
+    setValue(cmd);
+    setInputHovered(false);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(cmd.length, cmd.length);
+    });
+  };
 
   const clearStatusTimer = () => {
     if (statusTimerRef.current !== null) {
@@ -124,6 +128,40 @@ export default function App() {
     return () => { unlisten?.(); };
   }, []);
 
+  // Outside-click dismissal: a pointerdown anywhere outside the strip and
+  // outside the dropdown panel signals the user is done with the dropdown
+  // for now. It stays dismissed until explicit re-engagement.
+  useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      const insideStrip = stripRef.current?.contains(target);
+      const insideDropdown = dropdownRef.current?.contains(target);
+      if (!insideStrip && !insideDropdown) {
+        setDismissed(true);
+        setInputHovered(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, []);
+
+  // Window-blur dismissal: when the Macten window loses focus (user
+  // switches apps, clicks another window), treat it as a dismissal. The
+  // dropdown will not reappear until the user re-engages the input.
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    getCurrentWindow()
+      .listen("tauri://blur", () => {
+        setDismissed(true);
+        setInputHovered(false);
+        setFocused(false);
+      })
+      .then((fn) => { unlisten = fn; })
+      .catch(() => {});
+    return () => { unlisten?.(); };
+  }, []);
+
   const togglePin = async () => {
     const next = !pinned;
     setPinned(next);
@@ -140,17 +178,6 @@ export default function App() {
     getCurrentWindow().startDragging().catch(() => {});
   };
 
-  const acceptCompletion = () => {
-    if (!completion) return;
-    const next = value + completion;
-    setValue(next);
-    requestAnimationFrame(() => {
-      const el = inputRef.current;
-      if (!el) return;
-      el.setSelectionRange(next.length, next.length);
-    });
-  };
-
   const submit = async () => {
     const submittedInput = value.trim();
     if (!submittedInput) return;
@@ -162,6 +189,7 @@ export default function App() {
     }
 
     setHelpOpen(false);
+    setDismissed(true); // submitting is itself a dismissal of the dropdown
 
     const resolved = resolveNow(submittedInput);
     const resolveStatus = statusFromResolveNow(resolved);
@@ -186,21 +214,14 @@ export default function App() {
     if (e.key === "Escape") {
       e.preventDefault();
       if (menuOpen || helpOpen) { closeOverlays(); return; }
+      // No popover open → Escape dismisses the dropdown.
+      setDismissed(true);
       return;
     }
     if (e.key === "Enter") {
       e.preventDefault();
       void submit();
       return;
-    }
-    if (!ghostVisible || !completion) return;
-    if (e.key === "Tab") { e.preventDefault(); acceptCompletion(); return; }
-    if (e.key === "ArrowRight") {
-      const el = e.currentTarget;
-      if (el.selectionStart === el.value.length && el.selectionEnd === el.value.length) {
-        e.preventDefault();
-        acceptCompletion();
-      }
     }
   };
 
@@ -220,7 +241,11 @@ export default function App() {
         />
 
         {/* Input — single-element prompt, never inline-collides */}
-        <div className="input-wrap no-drag">
+        <div
+          className="input-wrap no-drag"
+          onMouseEnter={() => { setInputHovered(true); setDismissed(false); }}
+          onMouseLeave={() => setInputHovered(false)}
+        >
           <div className="input-stack">
             {showPrompt ? (
               <div className="empty-prompt" aria-hidden="true">
@@ -234,19 +259,6 @@ export default function App() {
                   {status.msg}
                 </span>
               </div>
-            ) : ghostVisible && prediction ? (
-              <div className="input-ghost" aria-hidden="true">
-                <span className="ghost-typed">{value}</span>
-                <span className="ghost-completion">{prediction.completion}</span>
-              </div>
-            ) : affordance ? (
-              <div className="input-affordance" aria-hidden="true">
-                <span className="affordance-typed">{value}</span>
-                <span className="affordance-trail">
-                  <span className="affordance-arrow">↩</span>
-                  <span className="affordance-label">{affordance}</span>
-                </span>
-              </div>
             ) : null}
             <input
               ref={inputRef}
@@ -256,6 +268,7 @@ export default function App() {
               aria-label="Command"
               onFocus={() => {
                 setFocused(true);
+                setDismissed(false);
                 if (!value) setPromptHint(pickPromptHint());
               }}
               onBlur={() => setFocused(false)}
@@ -297,6 +310,32 @@ export default function App() {
           </button>
         </div>
       </section>
+
+      {showDropdown && suggestions.length > 0 && (
+        <aside
+          ref={dropdownRef}
+          className="hover-dropdown no-drag"
+          aria-label="Command suggestions"
+          onMouseEnter={() => { setInputHovered(true); setDismissed(false); }}
+          onMouseLeave={() => setInputHovered(false)}
+        >
+          <span className="hover-dropdown__caption">
+            {value.trim() ? "Matches" : "Try one"}
+          </span>
+          <div className="hover-dropdown__rows">
+            {suggestions.map((cmd) => (
+              <button
+                key={cmd}
+                type="button"
+                className="hover-dropdown__row"
+                onClick={() => fillFromCommand(cmd)}
+              >
+                <code className="hover-dropdown__cmd">{cmd}</code>
+              </button>
+            ))}
+          </div>
+        </aside>
+      )}
 
       {menuOpen && (
         <aside

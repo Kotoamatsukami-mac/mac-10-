@@ -415,3 +415,80 @@ export function resolvePreview(
     target_ref: targetRef,
   };
 }
+
+// ─── Suggestions for the dropdown surface ────────────────────────────────────
+//
+// resolveSuggestions returns the top N candidates as a deliberately
+// lightweight shape. This is NOT a PreviewPrediction — the spine cannot
+// consume a Suggestion. Suggestions exist so the UI can populate the
+// hover-dropdown's predictive rows when the user is typing, without ever
+// granting them spine authority. Click a suggestion → input is filled →
+// resolveNow runs on submit just like manual typing.
+
+export interface Suggestion {
+  // The string to drop into the input when the user clicks this row.
+  fill: string;
+  // Display label as it appears in the dropdown row.
+  label: string;
+  // The verb prefix used to prepend (e.g., "open", "quit", "focus") so the
+  // dropdown can show a small intent badge if it wants to.
+  intent: IntentVerb;
+  // Confidence tier for visual distinction (exact match feels different
+  // from contains match).
+  tier: ConfidenceTier;
+}
+
+export function resolveSuggestions(
+  rawInput: string,
+  index: NativeEnvironmentIndex,
+  limit = 6,
+): Suggestion[] {
+  const normalized = normalizeText(rawInput);
+  if (!normalized) return [];
+
+  const intent = classifyIntent(rawInput);
+  const actionPhrase = intent.phrase;
+  const target = intent.rest.trim();
+
+  // Volume intents are single-shot — nothing meaningful to suggest beyond
+  // the synthesized prediction. Return empty so the dropdown falls back
+  // to its empty-state pool. The static pool already contains a volume hint.
+  if (VOLUME_INTENTS.has(intent.verb)) return [];
+
+  if (!target) return [];
+
+  const candidates = exactCandidates(target, index, intent.verb);
+  if (candidates.length === 0) {
+    candidates.push(...prefixAndContainsCandidates(target, index, intent.verb));
+  }
+
+  if (candidates.length === 0) return [];
+
+  candidates.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (TIER_RANK[b.match.tier] !== TIER_RANK[a.match.tier]) {
+      return TIER_RANK[b.match.tier] - TIER_RANK[a.match.tier];
+    }
+    return a.entity.label.localeCompare(b.entity.label);
+  });
+
+  // Deduplicate by entity.id so the same target doesn't show up twice
+  // (an alias and a label both matching, for instance).
+  const seen = new Set<string>();
+  const out: Suggestion[] = [];
+  for (const c of candidates) {
+    if (seen.has(c.entity.id)) continue;
+    seen.add(c.entity.id);
+    const fill = actionPhrase
+      ? `${actionPhrase} ${c.entity.label}`
+      : c.entity.label;
+    out.push({
+      fill,
+      label: c.entity.label,
+      intent: intent.verb,
+      tier: c.match.tier,
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}

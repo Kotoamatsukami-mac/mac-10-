@@ -26,7 +26,9 @@ import {
 } from "../resolver/nativeEnvironmentIndex";
 import {
   resolvePreview,
+  resolveSuggestions,
   type PreviewPrediction,
+  type Suggestion,
 } from "../resolver/previewResolver";
 
 const DEBOUNCE_MS = 100;
@@ -43,6 +45,7 @@ export interface PreviewPredictionHandle {
   prediction: PreviewPrediction | null;
   snapshot: NativeEnvironmentSnapshot | null;
   resolveNow: (input: string) => ResolveNowResult;
+  getSuggestions: (input: string, limit?: number) => Suggestion[];
 }
 
 export function usePreviewPrediction(input: string): PreviewPredictionHandle {
@@ -96,5 +99,14 @@ export function usePreviewPrediction(input: string): PreviewPredictionHandle {
     };
   }, []);
 
-  return { prediction, snapshot, resolveNow };
+  const getSuggestions = useCallback(
+    (currentInput: string, limit = 6): Suggestion[] => {
+      const index = indexRef.current;
+      if (!index) return [];
+      return resolveSuggestions(currentInput, index, limit);
+    },
+    [],
+  );
+
+  return { prediction, snapshot, resolveNow, getSuggestions };
 }

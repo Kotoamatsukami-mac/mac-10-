@@ -119,18 +119,46 @@ The whole system asks for attention without raising its voice.
 
 - Window: 920 × 380 (set in `src-tauri/tauri.conf.json`)
 - Stage padding-top: 32 px
-- Strip: `min(820px, calc(100vw - 48px))` × 56 px
+- Strip: `min(722px, calc(100vw - 48px))` × 56 px
 - Border radius: 17 px
 - Identity dot: 5 × 5 px, with 6 + 14 px horizontal margins
-- Tool buttons: 36 × 36 px, radius 11 px
+- Tool buttons: 32 × 32 px, radius 9 px
 - Settings popover: 268 px wide, top: 100 px
 - Help panel: `min(560px, calc(100vw - 48px))` wide, top: 100 px
+- Hover dropdown: `min(360px, calc(100vw - 48px))` wide, top: 100 px
 
 ## Principle — popovers and panels follow strip discipline
 
-The settings popover and help panel inherit the strip's design language: midnight glass, soft inner sheen, dark drop shadow, `--edge-mid` border, no internal vertical dividers, hairline horizontal dividers between rows only when row-to-row separation aids scanning.
+The settings popover, help panel, and hover dropdown inherit the strip's design language: midnight glass, soft inner sheen, dark drop shadow, `--edge-mid` border, no internal vertical dividers, hairline horizontal dividers between rows only when row-to-row separation aids scanning.
 
 Popovers should not introduce new accent colors, new typography weights, or new border tiers. They are quieter children of the strip.
+
+## Verified — hover dropdown surface
+
+The hover dropdown (`.hover-dropdown`) surfaces the example-command pool when the strip is at rest and the user engages the input via hover or focus.
+
+Owner: `src/App.tsx` (state + render) and `src/styles.css` (geometry + glass).
+
+Gating:
+
+- Visible only when `showPrompt` is true (`status.kind === "idle" && !value && !helpOpen`)
+- AND `(focused || inputHovered)` AND `!menuOpen`
+- Cannot appear while typing, while a status is showing, while ghost completion is showing, or while another popover is open
+
+Behavior:
+
+- Each row is a `<button type="button">` carrying a quoted command
+- Click on a row populates the input with the command and refocuses
+- The dropdown's own `onMouseEnter`/`onMouseLeave` keeps it open while the cursor moves between input and dropdown
+- An 180 ms slide-down intro animation; disabled under `prefers-reduced-motion: reduce`
+
+Geometry:
+
+- Width: `min(360px, calc(100vw - 48px))`
+- Top: 100 px (same baseline as settings popover and help panel — they mutually exclude)
+- Padding: 8 / 6 / 10 px
+
+The dropdown is data-driven by `PROMPT_HINTS` in `src/App.tsx`. Adding a new hint adds a row automatically; the doctrine does not require an entry per hint.
 
 ## Do not introduce — design drift
 
