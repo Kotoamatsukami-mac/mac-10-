@@ -13,6 +13,35 @@ import {
 
 const GHOST_DISPLAY_THRESHOLD = 0.28;
 
+// How long each status kind remains visible before reverting to idle.
+// Lives at module scope so the durations are inspectable in one place
+// rather than buried inside an event handler.
+const STATUS_DURATIONS_MS: Record<Exclude<StripStatus["kind"], "idle">, number> = {
+  ok: 1400,
+  hint: 2800,
+  blocked: 3200,
+};
+
+// Rotating example commands shown in the empty prompt's helper line.
+// Pulled from the live command surface — no aspirational copy. Each focus
+// without prior typing rolls a new one so the strip feels lived-in.
+const PROMPT_HINTS: readonly string[] = [
+  'Try "open Safari"',
+  'Try "quit Spotify"',
+  'Try "volume 50"',
+  'Try "downloads"',
+  'Try "focus Chrome"',
+  'Try "mute"',
+  'Try "open Settings"',
+] as const;
+
+function pickPromptHint(): string {
+  // PROMPT_HINTS is non-empty and Math.floor(random * length) is in [0, length-1].
+  // The non-null assertion keeps the function string-returning under
+  // noUncheckedIndexedAccess without spurious branching.
+  return PROMPT_HINTS[Math.floor(Math.random() * PROMPT_HINTS.length)]!;
+}
+
 function shouldShowGhost(p: PreviewPrediction | null): boolean {
   if (!p || !p.completion) return false;
   switch (p.confidence_tier) {
@@ -50,6 +79,7 @@ export default function App() {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
+  const [promptHint, setPromptHint] = useState<string>(() => pickPromptHint());
   const inputRef = useRef<HTMLInputElement>(null);
   const statusTimerRef = useRef<number | null>(null);
 
@@ -74,7 +104,7 @@ export default function App() {
     clearStatusTimer();
     setStatus(next);
     if (next.kind === "idle") return;
-    const ms = next.kind === "ok" ? 1400 : next.kind === "hint" ? 2800 : 3200;
+    const ms = STATUS_DURATIONS_MS[next.kind];
     statusTimerRef.current = window.setTimeout(() => {
       statusTimerRef.current = null;
       setStatus({ kind: "idle" });
@@ -183,10 +213,11 @@ export default function App() {
         <span className="strip-rim" aria-hidden="true" />
         <span className="strip-sheen" aria-hidden="true" />
 
-        {/* Command mark — small, refined, restrained */}
-        <div className="cmd-mark no-drag" aria-hidden="true">
-          <CmdGlyph />
-        </div>
+        {/* Identity dot — status-aware, the only thing on the left edge */}
+        <span
+          className={`identity-dot identity-dot-${status.kind}`}
+          aria-hidden="true"
+        />
 
         {/* Input — single-element prompt, never inline-collides */}
         <div className="input-wrap no-drag">
@@ -194,7 +225,7 @@ export default function App() {
             {showPrompt ? (
               <div className="empty-prompt" aria-hidden="true">
                 <span className="prompt-title">Ask your Mac</span>
-                <span className="prompt-hint">Try "open Safari"</span>
+                <span className="prompt-hint">{promptHint}</span>
               </div>
             ) : status.kind !== "idle" ? (
               <div className="status-line" aria-hidden="true">
@@ -223,7 +254,10 @@ export default function App() {
               type="text"
               value={value}
               aria-label="Command"
-              onFocus={() => setFocused(true)}
+              onFocus={() => {
+                setFocused(true);
+                if (!value) setPromptHint(pickPromptHint());
+              }}
               onBlur={() => setFocused(false)}
               onChange={(e) => {
                 setValue(e.target.value);
@@ -239,7 +273,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right toolbar — sculpted, larger, premium */}
+        {/* Right toolbar — quiet, native-sized */}
         <div className="toolbar no-drag">
           <button
             type="button"
@@ -248,7 +282,7 @@ export default function App() {
             title={pinned ? "Unpin from front" : "Keep in front"}
             aria-pressed={pinned}
           >
-            <LayerIcon />
+            <LayerIcon size={18} />
           </button>
 
           <button
@@ -259,7 +293,7 @@ export default function App() {
             aria-controls="settings-popover"
             title="Settings"
           >
-            <GearIcon />
+            <GearIcon size={18} />
           </button>
         </div>
       </section>
@@ -311,20 +345,6 @@ export default function App() {
 
 /* ── Inline icon set — clean SVG, no CSS hacks ──────────────────────────── */
 
-function CmdGlyph() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <path
-        d="M4 1.5a2 2 0 0 1 2 2v6a2 2 0 1 1-2-2h6a2 2 0 1 1-2 2v-6a2 2 0 1 1 2 2H4a2 2 0 1 1-2-2"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function LayerIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -335,9 +355,9 @@ function LayerIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-function GearIcon() {
+function GearIcon({ size = 20 }: { size?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
       <path
         d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.08a1.7 1.7 0 0 0-1.12-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.08a1.7 1.7 0 0 0 1.56-1.12 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.04a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.04a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.52 1.04Z"

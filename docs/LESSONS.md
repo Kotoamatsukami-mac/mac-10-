@@ -43,3 +43,40 @@ Current rule:
 
 - `Tab` / `ArrowRight` accept ghost completion.
 - `Space` keeps typing and suppresses preview while it is the trailing character.
+
+## Handoff staleness — verify HEAD before believing the diagnosis
+
+Engineering handoff documents are written at a moment in time. The repo moves on. A handoff describing PR #11 selectors is misleading by PR #12. A handoff naming components that no longer exist will send the next agent down a phantom-debugging path — searching for `WindowDragHandle.tsx` and `lounge-strip__marker` when neither was in the source tree.
+
+The crispness pass started from a handoff that diagnosed a "WindowDragHandle vs lounge-strip__marker semantic collision" — neither selector existed at the current HEAD. PR #12 (`ui/shell-composition-pass`) had demolished that structure three commits earlier.
+
+Correct rule:
+
+- Always run `git pull --ff-only origin main` before reading any handoff.
+- Verify each component name and selector mentioned in the handoff exists at the current HEAD before forming a hypothesis. `grep -rn "<selector>" src src-tauri/src` is the fastest check.
+- Treat the handoff as one input among several, not as ground truth. The other inputs are: the actual file contents, the current commit log, and the governance docs.
+- If the handoff's premise is invalid against the current repo, say so before patching anything. Restate the real left-edge problem in the handoff's vocabulary, and then propose a real fix.
+
+## Documentation as an authority surface — do not let it drift
+
+Documentation is not a journal. It is a contract.
+
+If `docs/BUILD_PHASES.md` describes the spine as `parser → validator → governor → executor → history` while `.github/copilot-instructions.md` describes it as `parser → validator → risk → approve → executor → history`, the next agent receives contradictory marching orders. Whichever doc the agent reads first becomes the de-facto authority, regardless of which one matches the live `runSpine.ts`.
+
+The crispness pass found and fixed exactly this drift in the copilot instructions. The fix was a one-line spine description plus a slot for the new UI doctrine. The cost of leaving it would have been every future agent who starts there inheriting a stale architectural picture.
+
+Correct rule:
+
+- Whenever the executable surface, the spine shape, or the UI slot model changes, update **all** governance docs that reference it in the **same commit**.
+- Periodically diff governance docs against `src/spine/runSpine.ts` and `src/App.tsx`. They should agree on stage names, file ownership, and current phase.
+- The governance priority list in copilot-instructions.md is the entry point. New governance docs must be registered there, in priority order, the moment they exist.
+
+## UI design drift — codify or it returns
+
+Without a written design contract, every iteration re-litigates basic geometry. PR #11 had a 3-dot drag handle. PR #12 traded it for a divided ⌘ pill. The crispness pass replaced it with a status dot. Each step was justified in isolation, but together they describe a UI that didn't know what its left edge was for.
+
+Correct rule:
+
+- Significant design decisions live in `docs/UI_DOCTRINE.md` and a corresponding ADR in `docs/DECISIONS.md`. The doctrine is the rule. The ADR is the receipt that explains how the rule was reached.
+- Re-litigation requires writing a new ADR. Silent reversal is forbidden.
+- The doctrine document includes a `Do not introduce` list. That list is the cheapest design tool in the repo — it stops drift before the engineer reaches for the keyboard.

@@ -33,6 +33,12 @@
   --edge-soft:   rgba(180, 196, 240, 0.08);
   --edge-mid:    rgba(180, 196, 240, 0.12);
   --edge-strong: rgba(180, 196, 240, 0.18);
+
+  /* Identity dot — idle and focused tiers (active states use --accent-*) */
+  --dot-idle:         rgba(180, 196, 240, 0.34);
+  --dot-idle-halo:    rgba(120, 140, 200, 0.10);
+  --dot-focus:        rgba(200, 215, 250, 0.62);
+  --dot-focus-halo:   rgba(140, 165, 230, 0.22);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -73,7 +79,7 @@ html, body, #root {
   height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 7px 0 16px;
+  padding: 0 7px 0 12px;
   border-radius: 17px;
   isolation: isolate;
 
@@ -120,13 +126,13 @@ html, body, #root {
 
 /* Focus state — quiet indigo whisper, not a glow shout */
 .strip.is-focused {
-  border-color: rgba(140, 160, 220, 0.22);
+  border-color: rgba(150, 170, 230, 0.30);
   box-shadow:
     0 24px 60px -18px rgba(0, 0, 0, 0.92),
     0 10px 28px -8px  rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(110, 130, 200, 0.08),
-    0 0 28px rgba(80, 100, 180, 0.10),
-    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 0 0 1px rgba(120, 140, 210, 0.12),
+    0 0 32px rgba(85, 105, 185, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
     inset 0 -1px 0 rgba(0, 0, 0, 0.7);
 }
 
@@ -154,12 +160,12 @@ html, body, #root {
     transparent 100%
   );
   filter: blur(0.4px);
-  opacity: 0.62;
+  opacity: 0.42;
   transition: opacity 320ms ease;
 }
 
 .strip.is-focused .strip-rim {
-  opacity: 0.84;
+  opacity: 0.96;
 }
 
 /* Top specular — thin lit seam */
@@ -187,19 +193,43 @@ html, body, #root {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   COMMAND MARK
+   IDENTITY DOT — the lone left-edge element.
+   One element, one role: status-as-identity. No glyph, no divider.
    ════════════════════════════════════════════════════════════════════ */
 
-.cmd-mark {
+.identity-dot {
   flex: 0 0 auto;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(218, 226, 248, 0.42);
-  padding: 0 12px 0 4px;
-  margin-right: 8px;
-  border-right: 1px solid var(--edge-soft);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin: 0 14px 0 6px;
+  background: var(--dot-color, var(--dot-idle));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4) inset,
+    0 0 6px var(--dot-halo, var(--dot-idle-halo));
+  transition: background 220ms ease, box-shadow 280ms ease;
+}
+
+.identity-dot-idle {
+  --dot-color: var(--dot-idle);
+  --dot-halo:  var(--dot-idle-halo);
+}
+.identity-dot-ok {
+  --dot-color: var(--accent-ok);
+  --dot-halo:  rgba(77, 214, 168, 0.32);
+}
+.identity-dot-hint {
+  --dot-color: var(--accent-hint);
+  --dot-halo:  rgba(155, 141, 217, 0.30);
+}
+.identity-dot-blocked {
+  --dot-color: var(--accent-blocked);
+  --dot-halo:  rgba(217, 104, 120, 0.34);
+}
+
+.strip.is-focused .identity-dot-idle {
+  --dot-color: var(--dot-focus);
+  --dot-halo:  var(--dot-focus-halo);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -212,7 +242,6 @@ html, body, #root {
   height: 100%;
   display: flex;
   align-items: center;
-  padding-left: 4px;
 }
 
 .input-stack {
@@ -268,12 +297,12 @@ html, body, #root {
 .prompt-title {
   color: var(--text-primary);
   font-size: 15.5px;
-  font-weight: 400;
-  letter-spacing: -0.012em;
-  opacity: 0.78;
+  font-weight: 460;
+  letter-spacing: -0.014em;
+  opacity: 0.88;
 }
 
-/* Massive-faint ghost-level helper — barely there */
+/* Quiet helper — wider contrast against the confident title above */
 .prompt-hint {
   color: var(--text-ghost);
   font-size: 12.5px;
@@ -375,7 +404,7 @@ html, body, #root {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   TOOLBAR — sculpted midnight buttons, no blue tint
+   TOOLBAR — quiet midnight buttons, native-sized
    ════════════════════════════════════════════════════════════════════ */
 
 .toolbar {
@@ -383,16 +412,15 @@ html, body, #root {
   align-items: center;
   gap: 4px;
   flex: 0 0 auto;
-  margin-left: 8px;
-  padding-left: 8px;
-  border-left: 1px solid var(--edge-soft);
+  margin-left: 10px;
+  padding-left: 0;
   height: 32px;
 }
 
 .tool-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   border: 1px solid var(--edge-soft);
   background:
     linear-gradient(180deg, rgba(20, 26, 42, 0.42), rgba(6, 9, 18, 0.5));
@@ -467,13 +495,13 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--edge-soft);
+  padding: 9px 14px;
   color: rgba(238, 242, 252, 0.9);
+  border-radius: 8px;
+  margin: 1px 4px;
   transition: background 130ms ease;
 }
 
-.pop-row:last-child { border-bottom: none; }
 .pop-row-interactive { cursor: pointer; }
 .pop-row-interactive:hover { background: rgba(120, 140, 200, 0.06); }
 
@@ -567,17 +595,17 @@ html, body, #root {
   color: rgba(220, 226, 244, 0.82);
 }
 
-.help-body { padding: 4px 0; }
+.help-body { padding: 4px 4px; }
 
 .help-row {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--edge-soft);
+  padding: 7px 10px;
+  border-radius: 8px;
 }
 
-.help-row:last-child { border-bottom: none; }
+.help-row + .help-row { margin-top: 1px; }
 
 .help-cmd {
   font-family: "SF Mono", "Menlo", "Monaco", monospace;
@@ -589,7 +617,7 @@ html, body, #root {
   border-radius: 5px;
   padding: 2.5px 8px;
   white-space: nowrap;
-  min-width: 130px;
+  min-width: 110px;
 }
 
 .help-desc {
@@ -616,5 +644,6 @@ html, body, #root {
   .tool-btn,
   .command-input,
   .strip,
+  .identity-dot,
   .strip-rim { transition-duration: 0ms !important; }
 }
