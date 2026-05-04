@@ -27,9 +27,10 @@ Governance priority:
 2. `docs/PRODUCT_CONTRACT.md`
 3. `docs/BUILD_PHASES.md`
 4. `docs/CHECKPOINT.md`
-5. `docs/DECISIONS.md`
-6. `docs/LESSONS.md`
-7. `docs/SECURITY_MODEL.md`
+5. `docs/UI_DOCTRINE.md`
+6. `docs/DECISIONS.md`
+7. `docs/LESSONS.md`
+8. `docs/SECURITY_MODEL.md`
 
 If a proposed change contradicts governance, stop and say so. Do not silently override it.
 
@@ -55,11 +56,13 @@ classifyIntent → NativeEnvironmentSnapshot → NativeEnvironmentIndex → reso
 
 Submit path, execution capable:
 
-resolveNow(currentInput) → parser → validator → risk → approve → executor → history
+resolveNow(currentInput) → parser → validator → governor → executor → history
+
+The governor internalizes risk classification and approval decision. Native execution is attempted only when `governor.status === "allow"`. `gate`, `block`, and `satisfied` outcomes do not execute and are still recorded.
 
 No provider, shortcut, UI helper, or smart path may bypass the submit spine.
 
-Spine files in `src/spine/`: parser.ts, registry.ts, validator.ts, risk.ts, approve.ts, executor.ts, history.ts, runSpine.ts
+Spine files in `src/spine/`: parser.ts, registry.ts, validator.ts, governor.ts, risk.ts, approve.ts, undoPolicy.ts, executor.ts, history.ts, runSpine.ts, outcomeMessage.ts
 
 Phrase grammar in `src/resolver/phraseGrammar.ts`
 
@@ -137,6 +140,17 @@ CI runs on push/PR: TypeScript build + Rust check/clippy/fmt
 - second executor or second spine
 - target-specific command functions (openSafari, openYoutube)
 - AppleScript / osascript / free-form shell
+
+## Strip UI rules
+
+Full design contract lives in `docs/UI_DOCTRINE.md`. Quick reference:
+
+- The strip is a single slab. **No internal vertical dividers** between slots.
+- Three-slot model: `identity-dot` (left, status-aware) · `input-wrap` (center, the only truly interactive surface aside from toolbar) · `toolbar` (right, two sculpted buttons).
+- One element, one role. Do not stack a glyph and a status pip in the same slot. Do not add a second drag handle — drag is owned by `.shell-stage` via `getCurrentWindow().startDragging()`, with `.no-drag` opt-outs on input and toolbar.
+- Color, weight, and opacity are tokens declared in `:root` of `src/styles.css`. Do not introduce ad-hoc rgba() literals when a `--ink-*`, `--text-*`, `--edge-*`, or `--accent-*` token already covers the role.
+- Hover states must remain quiet: subtle border tint, a faint inset highlight, and at most a small ambient glow. No saturated bloom, no scale-up, no full-rainbow halo.
+- `App.tsx` may not own command logic, lexicon, risk classification, approval policy, or native dispatch. It is the strip projection and event bridge only.
 
 ## Documentation rule
 

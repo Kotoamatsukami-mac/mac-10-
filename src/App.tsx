@@ -240,7 +240,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right toolbar — sculpted, larger, premium */}
+        {/* Right toolbar — quiet, native-sized */}
         <div className="toolbar no-drag">
           <button
             type="button"
@@ -249,7 +249,7 @@ export default function App() {
             title={pinned ? "Unpin from front" : "Keep in front"}
             aria-pressed={pinned}
           >
-            <LayerIcon />
+            <LayerIcon size={18} />
           </button>
 
           <button
@@ -260,7 +260,7 @@ export default function App() {
             aria-controls="settings-popover"
             title="Settings"
           >
-            <GearIcon />
+            <GearIcon size={18} />
           </button>
         </div>
       </section>
@@ -322,9 +322,9 @@ function LayerIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-function GearIcon() {
+function GearIcon({ size = 20 }: { size?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
       <path
         d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.08a1.7 1.7 0 0 0-1.12-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.08a1.7 1.7 0 0 0 1.56-1.12 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.04a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.04a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.52 1.04Z"

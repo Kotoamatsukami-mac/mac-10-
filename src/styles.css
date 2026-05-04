@@ -398,7 +398,7 @@ html, body, #root {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   TOOLBAR — sculpted midnight buttons, no blue tint
+   TOOLBAR — quiet midnight buttons, native-sized
    ════════════════════════════════════════════════════════════════════ */
 
 .toolbar {
@@ -412,9 +412,9 @@ html, body, #root {
 }
 
 .tool-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   border: 1px solid var(--edge-soft);
   background:
     linear-gradient(180deg, rgba(20, 26, 42, 0.42), rgba(6, 9, 18, 0.5));
@@ -489,13 +489,13 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--edge-soft);
+  padding: 9px 14px;
   color: rgba(238, 242, 252, 0.9);
+  border-radius: 8px;
+  margin: 1px 4px;
   transition: background 130ms ease;
 }
 
-.pop-row:last-child { border-bottom: none; }
 .pop-row-interactive { cursor: pointer; }
 .pop-row-interactive:hover { background: rgba(120, 140, 200, 0.06); }
 
@@ -589,17 +589,17 @@ html, body, #root {
   color: rgba(220, 226, 244, 0.82);
 }
 
-.help-body { padding: 4px 0; }
+.help-body { padding: 4px 4px; }
 
 .help-row {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--edge-soft);
+  padding: 7px 10px;
+  border-radius: 8px;
 }
 
-.help-row:last-child { border-bottom: none; }
+.help-row + .help-row { margin-top: 1px; }
 
 .help-cmd {
   font-family: "SF Mono", "Menlo", "Monaco", monospace;
@@ -611,7 +611,7 @@ html, body, #root {
   border-radius: 5px;
   padding: 2.5px 8px;
   white-space: nowrap;
-  min-width: 130px;
+  min-width: 110px;
 }
 
 .help-desc {
