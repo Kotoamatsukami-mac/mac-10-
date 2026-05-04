@@ -472,13 +472,38 @@ export function resolveSuggestions(
     return a.entity.label.localeCompare(b.entity.label);
   });
 
-  // Deduplicate by entity.id so the same target doesn't show up twice
-  // (an alias and a label both matching, for instance).
-  const seen = new Set<string>();
+  // Deduplicate by stable user-facing identity, not just entity.id.
+  // The same real-world target can appear through multiple sources (e.g.
+  // app:com.spotify.client, dock:com.spotify.client, service:spotify).
+  // Identity priority: bundle_id > url > path > identifier > kind+label.
+  // Highest-scored candidate wins when identities collide.
+  function stableKey(c: Candidate): string {
+    const e = c.entity;
+    if (e.bundle_id) return `bid:${e.bundle_id}`;
+    if (e.url) return `url:${e.url}`;
+    if (e.path) return `path:${e.path}`;
+    if (e.identifier) return `id:${e.identifier}`;
+    return `${e.target_kind}:${e.label.toLowerCase()}`;
+  }
+
+  const seen = new Map<string, number>(); // stableKey → best score
   const out: Suggestion[] = [];
   for (const c of candidates) {
-    if (seen.has(c.entity.id)) continue;
-    seen.add(c.entity.id);
+    const key = stableKey(c);
+    const prev = seen.get(key);
+    if (prev !== undefined && prev >= c.score) continue; // already have a better one
+    if (prev !== undefined) {
+      // Replace the earlier, lower-scored duplicate in-place.
+      const idx = out.findIndex((s) => {
+        // Match by fill since that's stable per key.
+        const fill = actionPhrase
+          ? `${actionPhrase} ${c.entity.label}`
+          : c.entity.label;
+        return s.fill === fill || s.label === c.entity.label;
+      });
+      if (idx >= 0) out.splice(idx, 1);
+    }
+    seen.set(key, c.score);
     const fill = actionPhrase
       ? `${actionPhrase} ${c.entity.label}`
       : c.entity.label;

@@ -63,26 +63,36 @@ test("ui doctrine: forbidden legacy selectors are absent", () => {
 });
 
 // ────────────────────────────────────────────────────────────────────
-// Drag is ambient. There must be exactly one startDragging() call
-// site and it must be on the shell-stage onMouseDown handler. A
-// second drag handler is the canonical drift path and is forbidden.
+// Drag is owned by .strip, not the transparent surround. There must
+// be exactly one startDragging() call site. CSS app-region: drag must
+// live on .strip, not .shell-stage.
 // ────────────────────────────────────────────────────────────────────
 
-test("ui doctrine: drag is owned by shell-stage only", () => {
+test("ui doctrine: drag is owned by strip, not transparent surround", () => {
   const matches = APP.match(/startDragging\(\)/g) ?? [];
   assert.equal(
     matches.length,
     1,
-    "exactly one startDragging() call site is permitted (the shell-stage drag handler)",
+    "exactly one startDragging() call site is permitted (the startDrag handler)",
   );
 
-  // The only call site should be inside the startDrag function used by
-  // shell-stage's onMouseDown. Verify by proximity.
+  // The call site must live inside the startDrag function which scopes
+  // drag to the visible strip via stripRef.contains.
   const callIdx = APP.indexOf("startDragging()");
   const dragHandlerIdx = APP.lastIndexOf("const startDrag", callIdx);
   assert.ok(
-    dragHandlerIdx > 0 && callIdx - dragHandlerIdx < 400,
+    dragHandlerIdx > 0 && callIdx - dragHandlerIdx < 600,
     "startDragging() must live inside the startDrag handler",
+  );
+
+  // CSS: .strip must own app-region: drag (not .shell-stage).
+  assert.ok(
+    /\.strip\s*\{[^}]*app-region:\s*drag/s.test(CSS),
+    ".strip must declare app-region: drag",
+  );
+  assert.ok(
+    !/\.shell-stage\s*\{[^}]*app-region:\s*drag/s.test(CSS),
+    ".shell-stage must NOT declare app-region: drag",
   );
 });
 

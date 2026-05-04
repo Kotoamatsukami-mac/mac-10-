@@ -45,21 +45,22 @@ Owner: `src/App.tsx` (structure) and `src/styles.css` (tokens, geometry, state).
 
 | Slot | Role | Interactive | Drag |
 | --- | --- | --- | --- |
-| `.identity-dot` | Status-as-identity. 5px luminous orb. Color shifts with `status.kind` (idle / ok / hint / blocked). Brightens on focus. | No | Inherits stage drag |
-| `.input-wrap` | The command input, the empty prompt, the ghost completion, the resolved affordance, the typed-plus-status line. Single visual lane. | Yes (text input) | `.no-drag` |
+| `.identity-dot` | Status-as-identity. 5px luminous orb. Color shifts with `status.kind` (idle / ok / hint / blocked). Brightens on focus. | No | Inherits strip drag |
+| `.input-wrap` | The command input, the empty prompt, the typed-plus-status line. The hover dropdown is the sole predictive surface. | Yes (text input) | `.no-drag` |
 | `.toolbar` | Pin button (toggles always-on-top). Settings button (opens settings popover). | Yes (buttons) | `.no-drag` |
 
 Auxiliary decorative spans (`.strip-rim`, `.strip-sheen`) are zero-thickness atmospheric elements, not slots.
 
 ## Verified — drag model
 
-Drag is ambient, not a visible widget.
+Drag is owned by the visible strip, not the transparent surround.
 
-- `.shell-stage` (the outer `<main>`) carries `-webkit-app-region: drag` and an `onMouseDown` handler that calls `getCurrentWindow().startDragging()` for non-no-drag targets.
-- `.no-drag` opts out specific elements: `.input-wrap`, `.toolbar`, popovers, panels.
-- The user can drag from the strip's transparent surround, the rim atmosphere, or the strip body itself outside no-drag zones.
+- `.strip` carries `-webkit-app-region: drag` and is the CSS-level drag surface. Only the visible 722×56 glass slab responds to OS-level window dragging.
+- `.shell-stage` (the outer `<main>`) carries an `onMouseDown` handler that calls `getCurrentWindow().startDragging()` as a Tauri fallback, but this handler checks `stripRef.current.contains(target)` before firing — it cannot drag from the transparent canvas.
+- `.no-drag` opts out specific elements: `.input-wrap`, `.toolbar`, popovers, panels, the hover dropdown.
+- The transparent surround (920×380 window minus the 722×56 strip) is **not draggable**. Clicking it does nothing.
 
-There is no explicit drag handle, three-dot affordance, or labeled drag region. This is intentional: explicit drag affordances make a thin command strip feel like a hardware widget instead of a native macOS surface.
+There is no explicit drag handle, three-dot affordance, or labeled drag region. The visible strip body is the drag surface; input and toolbar opt out.
 
 ## Principle — typography is a contrast system
 

@@ -49,6 +49,7 @@ export default function App() {
   const [focused, setFocused] = useState(false);
   const [inputHovered, setInputHovered] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [status, setStatus] = useState<StripStatus>({ kind: "idle" });
   const [promptHint, setPromptHint] = useState<string>(() => pickPromptHint());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +86,12 @@ export default function App() {
     }
     return getSuggestions(value, 6).map((s) => s.fill);
   })();
+
+  // Reset keyboard selection when suggestions change.
+  const suggestionsKey = suggestions.join("|");
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [suggestionsKey]);
 
   const fillFromCommand = (cmd: string) => {
     setValue(cmd);
@@ -175,6 +182,10 @@ export default function App() {
   const startDrag = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest(".no-drag")) return;
+    // Only drag when pointer is over the visible strip, not the transparent
+    // surround. CSS app-region: drag on .strip handles the OS-level case;
+    // this JS handler is the Tauri fallback for the same boundary.
+    if (!stripRef.current?.contains(e.target as Node)) return;
     getCurrentWindow().startDragging().catch(() => {});
   };
 
@@ -214,12 +225,38 @@ export default function App() {
     if (e.key === "Escape") {
       e.preventDefault();
       if (menuOpen || helpOpen) { closeOverlays(); return; }
-      // No popover open → Escape dismisses the dropdown.
       setDismissed(true);
+      setSelectedIndex(-1);
       return;
     }
+
+    // Dropdown keyboard navigation.
+    if (showDropdown && suggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((i) => (i + 1) % suggestions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+        return;
+      }
+      if (e.key === "Tab" && selectedIndex >= 0) {
+        e.preventDefault();
+        const sel = suggestions[selectedIndex];
+        if (sel) fillFromCommand(sel);
+        return;
+      }
+    }
+
     if (e.key === "Enter") {
       e.preventDefault();
+      // If a dropdown suggestion is keyboard-selected, fill it instead of submitting.
+      if (showDropdown && selectedIndex >= 0) {
+        const sel = suggestions[selectedIndex];
+        if (sel) { fillFromCommand(sel); return; }
+      }
       void submit();
       return;
     }
@@ -228,6 +265,7 @@ export default function App() {
   return (
     <main className="shell-stage" onMouseDown={startDrag}>
       <section
+        ref={stripRef}
         className={`strip ${focused ? "is-focused" : ""}`}
         aria-label="Macten command strip"
       >
@@ -323,14 +361,14 @@ export default function App() {
             {value.trim() ? "Matches" : "Try one"}
           </span>
           <div className="hover-dropdown__rows">
-            {suggestions.map((cmd) => (
+            {suggestions.map((cmd, i) => (
               <button
                 key={cmd}
                 type="button"
-                className="hover-dropdown__row"
+                className={`hover-dropdown__row${i === selectedIndex ? " is-selected" : ""}`}
                 onClick={() => fillFromCommand(cmd)}
               >
-                <code className="hover-dropdown__cmd">{cmd}</code>
+                {cmd}
               </button>
             ))}
           </div>
