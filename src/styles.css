@@ -33,6 +33,12 @@
   --edge-soft:   rgba(180, 196, 240, 0.08);
   --edge-mid:    rgba(180, 196, 240, 0.12);
   --edge-strong: rgba(180, 196, 240, 0.18);
+
+  /* Identity dot — idle and focused tiers (active states use --accent-*) */
+  --dot-idle:         rgba(180, 196, 240, 0.34);
+  --dot-idle-halo:    rgba(120, 140, 200, 0.10);
+  --dot-focus:        rgba(200, 215, 250, 0.62);
+  --dot-focus-halo:   rgba(140, 165, 230, 0.22);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -197,16 +203,16 @@ html, body, #root {
   height: 5px;
   border-radius: 50%;
   margin: 0 14px 0 6px;
-  background: var(--dot-color, rgba(180, 196, 240, 0.34));
+  background: var(--dot-color, var(--dot-idle));
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.4) inset,
-    0 0 6px var(--dot-halo, rgba(180, 196, 240, 0.16));
+    0 0 6px var(--dot-halo, var(--dot-idle-halo));
   transition: background 220ms ease, box-shadow 280ms ease;
 }
 
 .identity-dot-idle {
-  --dot-color: rgba(180, 196, 240, 0.34);
-  --dot-halo:  rgba(120, 140, 200, 0.10);
+  --dot-color: var(--dot-idle);
+  --dot-halo:  var(--dot-idle-halo);
 }
 .identity-dot-ok {
   --dot-color: var(--accent-ok);
@@ -222,8 +228,8 @@ html, body, #root {
 }
 
 .strip.is-focused .identity-dot-idle {
-  --dot-color: rgba(200, 215, 250, 0.62);
-  --dot-halo:  rgba(140, 165, 230, 0.22);
+  --dot-color: var(--dot-focus);
+  --dot-halo:  var(--dot-focus-halo);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -296,7 +302,7 @@ html, body, #root {
   opacity: 0.88;
 }
 
-/* Massive-faint ghost-level helper — barely there */
+/* Quiet helper — wider contrast against the confident title above */
 .prompt-hint {
   color: var(--text-ghost);
   font-size: 12.5px;

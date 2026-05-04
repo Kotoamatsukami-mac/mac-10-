@@ -85,6 +85,7 @@ Tokens live in `:root` in `src/styles.css`. Categories:
 | `--ink-deep` `--ink-mid` `--ink-rise` `--ink-sheen` | Midnight palette for the glass slab |
 | `--text-primary` `--text-secondary` `--text-tertiary` `--text-faint` `--text-ghost` `--ghost-color` | Text contrast tiers |
 | `--edge-soft` `--edge-mid` `--edge-strong` | Border/hairline tiers (used for borders only — never as internal dividers within the strip) |
+| `--dot-idle` `--dot-idle-halo` `--dot-focus` `--dot-focus-halo` | Identity-dot tiers for idle and focused states (active states reuse `--accent-*`) |
 
 ## Principle — color discipline
 
